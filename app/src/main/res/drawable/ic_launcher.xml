@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h108v108h-108z" />
+    <!-- Opposing open squares collect into one ledger mark. -->
+    <path android:fillColor="#15171C" android:pathData="M60,24H24V68H48V58H34V34H60Z" />
+    <path android:fillColor="#15171C" android:pathData="M48,40H84V84H48V74H74V50H48Z" />
+    <path android:fillColor="#315CFF" android:pathData="M50,58h10v10h-10z" />
+</vector>

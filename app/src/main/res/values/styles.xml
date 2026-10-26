@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#315CFF</item>
+        <item name="android:colorBackground">#F5F6F8</item>
+        <item name="android:colorBackgroundFloating">#FFFFFF</item>
+        <item name="android:colorForeground">#15171C</item>
+        <item name="android:textColorPrimary">#15171C</item>
+        <item name="android:textColorSecondary">#656A76</item>
+        <item name="android:textColorHint">#656A76</item>
+        <item name="android:textColorHighlight">#EDF1FF</item>
+        <item name="android:colorControlNormal">#656A76</item>
+        <item name="android:colorControlActivated">#315CFF</item>
+        <item name="android:colorControlHighlight">#1A315CFF</item>
+        <item name="android:colorButtonNormal">#EDF1FF</item>
+        <item name="android:buttonStyle">@style/AppButton</item>
+        <item name="android:windowBackground">#F5F6F8</item>
+        <item name="android:statusBarColor">#F5F6F8</item>
+        <item name="android:navigationBarColor">#F5F6F8</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <style name="AppButton" parent="android:style/Widget.Material.Button">
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+</resources>

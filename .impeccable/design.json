@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T05:32:44.708978+00:00",
+  "title": "Design System: 归拢 · 手绘资产手帐",
+  "extensions": {
+    "colorMeta": {
+      "pencil-paper": {
+        "role": "neutral",
+        "displayName": "pencil-paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0082 91.48)",
+          "oklch(26.43% 0.0082 91.48)",
+          "oklch(37.86% 0.0082 91.48)",
+          "oklch(49.29% 0.0082 91.48)",
+          "oklch(60.71% 0.0082 91.48)",
+          "oklch(72.14% 0.0082 91.48)",
+          "oklch(83.57% 0.0082 91.48)",
+          "oklch(95.00% 0.0082 91.48)"
+        ]
+      },
+      "pencil-surface": {
+        "role": "neutral",
+        "displayName": "pencil-surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0067 97.35)",
+          "oklch(26.43% 0.0067 97.35)",
+          "oklch(37.86% 0.0067 97.35)",
+          "oklch(49.29% 0.0067 97.35)",
+          "oklch(60.71% 0.0067 97.35)",
+          "oklch(72.14% 0.0067 97.35)",
+          "oklch(83.57% 0.0067 97.35)",
+          "oklch(95.00% 0.0067 97.35)"
+        ]
+      },
+      "pencil-ink": {
+        "role": "neutral",
+        "displayName": "pencil-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0112 128.86)",
+          "oklch(26.43% 0.0112 128.86)",
+          "oklch(37.86% 0.0112 128.86)",
+          "oklch(49.29% 0.0112 128.86)",
+          "oklch(60.71% 0.0112 128.86)",
+          "oklch(72.14% 0.0112 128.86)",
+          "oklch(83.57% 0.0112 128.86)",
+          "oklch(95.00% 0.0112 128.86)"
+        ]
+      },
+      "pencil-muted": {
+        "role": "neutral",
+        "displayName": "pencil-muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0194 125.57)",
+          "oklch(26.43% 0.0194 125.57)",
+          "oklch(37.86% 0.0194 125.57)",
+          "oklch(49.29% 0.0194 125.57)",
+          "oklch(60.71% 0.0194 125.57)",
+          "oklch(72.14% 0.0194 125.57)",
+          "oklch(83.57% 0.0194 125.57)",
+          "oklch(95.00% 0.0194 125.57)"
+        ]
+      },
+      "pencil-line": {
+        "role": "neutral",
+        "displayName": "pencil-line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0252 119.58)",
+          "oklch(26.43% 0.0252 119.58)",
+          "oklch(37.86% 0.0252 119.58)",
+          "oklch(49.29% 0.0252 119.58)",
+          "oklch(60.71% 0.0252 119.58)",
+          "oklch(72.14% 0.0252 119.58)",
+          "oklch(83.57% 0.0252 119.58)",
+          "oklch(95.00% 0.0252 119.58)"
+        ]
+      },
+      "pencil-accent": {
+        "role": "primary",
+        "displayName": "pencil-accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.0898 243.24)",
+          "oklch(26.43% 0.0898 243.24)",
+          "oklch(37.86% 0.0898 243.24)",
+          "oklch(49.29% 0.0898 243.24)",
+          "oklch(60.71% 0.0898 243.24)",
+          "oklch(72.14% 0.0898 243.24)",
+          "oklch(83.57% 0.0898 243.24)",
+          "oklch(95.00% 0.0898 243.24)"
+        ]
+      },
+      "pencil-pale": {
+        "role": "neutral",
+        "displayName": "pencil-pale",
+        "tonalRamp": [
+          "oklch(15.00% 0.0282 126.82)",
+          "oklch(26.43% 0.0282 126.82)",
+          "oklch(37.86% 0.0282 126.82)",
+          "oklch(49.29% 0.0282 126.82)",
+          "oklch(60.71% 0.0282 126.82)",
+          "oklch(72.14% 0.0282 126.82)",
+          "oklch(83.57% 0.0282 126.82)",
+          "oklch(95.00% 0.0282 126.82)"
+        ]
+      },
+      "pencil-branch-1": {
+        "role": "secondary",
+        "displayName": "pencil-branch-1",
+        "tonalRamp": [
+          "oklch(15.00% 0.1098 245.50)",
+          "oklch(26.43% 0.1098 245.50)",
+          "oklch(37.86% 0.1098 245.50)",
+          "oklch(49.29% 0.1098 245.50)",
+          "oklch(60.71% 0.1098 245.50)",
+          "oklch(72.14% 0.1098 245.50)",
+          "oklch(83.57% 0.1098 245.50)",
+          "oklch(95.00% 0.1098 245.50)"
+        ]
+      },
+      "pencil-branch-2": {
+        "role": "secondary",
+        "displayName": "pencil-branch-2",
+        "tonalRamp": [
+          "oklch(15.00% 0.1015 125.59)",
+          "oklch(26.43% 0.1015 125.59)",
+          "oklch(37.86% 0.1015 125.59)",
+          "oklch(49.29% 0.1015 125.59)",
+          "oklch(60.71% 0.1015 125.59)",
+          "oklch(72.14% 0.1015 125.59)",
+          "oklch(83.57% 0.1015 125.59)",
+          "oklch(95.00% 0.1015 125.59)"
+        ]
+      },
+      "pencil-branch-3": {
+        "role": "secondary",
+        "displayName": "pencil-branch-3",
+        "tonalRamp": [
+          "oklch(15.00% 0.1104 72.63)",
+          "oklch(26.43% 0.1104 72.63)",
+          "oklch(37.86% 0.1104 72.63)",
+          "oklch(49.29% 0.1104 72.63)",
+          "oklch(60.71% 0.1104 72.63)",
+          "oklch(72.14% 0.1104 72.63)",
+          "oklch(83.57% 0.1104 72.63)",
+          "oklch(95.00% 0.1104 72.63)"
+        ]
+      },
+      "pencil-branch-4": {
+        "role": "secondary",
+        "displayName": "pencil-branch-4",
+        "tonalRamp": [
+          "oklch(15.00% 0.0999 310.98)",
+          "oklch(26.43% 0.0999 310.98)",
+          "oklch(37.86% 0.0999 310.98)",
+          "oklch(49.29% 0.0999 310.98)",
+          "oklch(60.71% 0.0999 310.98)",
+          "oklch(72.14% 0.0999 310.98)",
+          "oklch(83.57% 0.0999 310.98)",
+          "oklch(95.00% 0.0999 310.98)"
+        ]
+      },
+      "pencil-branch-5": {
+        "role": "secondary",
+        "displayName": "pencil-branch-5",
+        "tonalRamp": [
+          "oklch(15.00% 0.0766 188.51)",
+          "oklch(26.43% 0.0766 188.51)",
+          "oklch(37.86% 0.0766 188.51)",
+          "oklch(49.29% 0.0766 188.51)",
+          "oklch(60.71% 0.0766 188.51)",
+          "oklch(72.14% 0.0766 188.51)",
+          "oklch(83.57% 0.0766 188.51)",
+          "oklch(95.00% 0.0766 188.51)"
+        ]
+      },
+      "pencil-branch-6": {
+        "role": "secondary",
+        "displayName": "pencil-branch-6",
+        "tonalRamp": [
+          "oklch(15.00% 0.0966 27.46)",
+          "oklch(26.43% 0.0966 27.46)",
+          "oklch(37.86% 0.0966 27.46)",
+          "oklch(49.29% 0.0966 27.46)",
+          "oklch(60.71% 0.0966 27.46)",
+          "oklch(72.14% 0.0966 27.46)",
+          "oklch(83.57% 0.0966 27.46)",
+          "oklch(95.00% 0.0966 27.46)"
+        ]
+      },
+      "blue-paper": {
+        "role": "neutral",
+        "displayName": "blue-paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0051 247.88)",
+          "oklch(26.43% 0.0051 247.88)",
+          "oklch(37.86% 0.0051 247.88)",
+          "oklch(49.29% 0.0051 247.88)",
+          "oklch(60.71% 0.0051 247.88)",
+          "oklch(72.14% 0.0051 247.88)",
+          "oklch(83.57% 0.0051 247.88)",
+          "oklch(95.00% 0.0051 247.88)"
+        ]
+      },
+      "blue-surface": {
+        "role": "neutral",
+        "displayName": "blue-surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0029 264.54)",
+          "oklch(26.43% 0.0029 264.54)",
+          "oklch(37.86% 0.0029 264.54)",
+          "oklch(49.29% 0.0029 264.54)",
+          "oklch(60.71% 0.0029 264.54)",
+          "oklch(72.14% 0.0029 264.54)",
+          "oklch(83.57% 0.0029 264.54)",
+          "oklch(95.00% 0.0029 264.54)"
+        ]
+      },
+      "blue-ink": {
+        "role": "neutral",
+        "displayName": "blue-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0516 243.80)",
+          "oklch(26.43% 0.0516 243.80)",
+          "oklch(37.86% 0.0516 243.80)",
+          "oklch(49.29% 0.0516 243.80)",
+          "oklch(60.71% 0.0516 243.80)",
+          "oklch(72.14% 0.0516 243.80)",
+          "oklch(83.57% 0.0516 243.80)",
+          "oklch(95.00% 0.0516 243.80)"
+        ]
+      },
+      "blue-muted": {
+        "role": "neutral",
+        "displayName": "blue-muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0359 241.26)",
+          "oklch(26.43% 0.0359 241.26)",
+          "oklch(37.86% 0.0359 241.26)",
+          "oklch(49.29% 0.0359 241.26)",
+          "oklch(60.71% 0.0359 241.26)",
+          "oklch(72.14% 0.0359 241.26)",
+          "oklch(83.57% 0.0359 241.26)",
+          "oklch(95.00% 0.0359 241.26)"
+        ]
+      },
+      "blue-line": {
+        "role": "neutral",
+        "displayName": "blue-line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0251 238.47)",
+          "oklch(26.43% 0.0251 238.47)",
+          "oklch(37.86% 0.0251 238.47)",
+          "oklch(49.29% 0.0251 238.47)",
+          "oklch(60.71% 0.0251 238.47)",
+          "oklch(72.14% 0.0251 238.47)",
+          "oklch(83.57% 0.0251 238.47)",
+          "oklch(95.00% 0.0251 238.47)"
+        ]
+      },
+      "blue-accent": {
+        "role": "primary",
+        "displayName": "blue-accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.0878 244.42)",
+          "oklch(26.43% 0.0878 244.42)",
+          "oklch(37.86% 0.0878 244.42)",
+          "oklch(49.29% 0.0878 244.42)",
+          "oklch(60.71% 0.0878 244.42)",
+          "oklch(72.14% 0.0878 244.42)",
+          "oklch(83.57% 0.0878 244.42)",
+          "oklch(95.00% 0.0878 244.42)"
+        ]
+      },
+      "blue-pale": {
+        "role": "neutral",
+        "displayName": "blue-pale",
+        "tonalRamp": [
+          "oklch(15.00% 0.0170 242.43)",
+          "oklch(26.43% 0.0170 242.43)",
+          "oklch(37.86% 0.0170 242.43)",
+          "oklch(49.29% 0.0170 242.43)",
+          "oklch(60.71% 0.0170 242.43)",
+          "oklch(72.14% 0.0170 242.43)",
+          "oklch(83.57% 0.0170 242.43)",
+          "oklch(95.00% 0.0170 242.43)"
+        ]
+      },
+      "blue-branch-1": {
+        "role": "secondary",
+        "displayName": "blue-branch-1",
+        "tonalRamp": [
+          "oklch(15.00% 0.1021 243.33)",
+          "oklch(26.43% 0.1021 243.33)",
+          "oklch(37.86% 0.1021 243.33)",
+          "oklch(49.29% 0.1021 243.33)",
+          "oklch(60.71% 0.1021 243.33)",
+          "oklch(72.14% 0.1021 243.33)",
+          "oklch(83.57% 0.1021 243.33)",
+          "oklch(95.00% 0.1021 243.33)"
+        ]
+      },
+      "blue-branch-2": {
+        "role": "secondary",
+        "displayName": "blue-branch-2",
+        "tonalRamp": [
+          "oklch(15.00% 0.0639 224.02)",
+          "oklch(26.43% 0.0639 224.02)",
+          "oklch(37.86% 0.0639 224.02)",
+          "oklch(49.29% 0.0639 224.02)",
+          "oklch(60.71% 0.0639 224.02)",
+          "oklch(72.14% 0.0639 224.02)",
+          "oklch(83.57% 0.0639 224.02)",
+          "oklch(95.00% 0.0639 224.02)"
+        ]
+      },
+      "blue-branch-3": {
+        "role": "secondary",
+        "displayName": "blue-branch-3",
+        "tonalRamp": [
+          "oklch(15.00% 0.0697 271.41)",
+          "oklch(26.43% 0.0697 271.41)",
+          "oklch(37.86% 0.0697 271.41)",
+          "oklch(49.29% 0.0697 271.41)",
+          "oklch(60.71% 0.0697 271.41)",
+          "oklch(72.14% 0.0697 271.41)",
+          "oklch(83.57% 0.0697 271.41)",
+          "oklch(95.00% 0.0697 271.41)"
+        ]
+      },
+      "blue-branch-4": {
+        "role": "secondary",
+        "displayName": "blue-branch-4",
+        "tonalRamp": [
+          "oklch(15.00% 0.0682 194.13)",
+          "oklch(26.43% 0.0682 194.13)",
+          "oklch(37.86% 0.0682 194.13)",
+          "oklch(49.29% 0.0682 194.13)",
+          "oklch(60.71% 0.0682 194.13)",
+          "oklch(72.14% 0.0682 194.13)",
+          "oklch(83.57% 0.0682 194.13)",
+          "oklch(95.00% 0.0682 194.13)"
+        ]
+      },
+      "blue-branch-5": {
+        "role": "secondary",
+        "displayName": "blue-branch-5",
+        "tonalRamp": [
+          "oklch(15.00% 0.0886 248.92)",
+          "oklch(26.43% 0.0886 248.92)",
+          "oklch(37.86% 0.0886 248.92)",
+          "oklch(49.29% 0.0886 248.92)",
+          "oklch(60.71% 0.0886 248.92)",
+          "oklch(72.14% 0.0886 248.92)",
+          "oklch(83.57% 0.0886 248.92)",
+          "oklch(95.00% 0.0886 248.92)"
+        ]
+      },
+      "blue-branch-6": {
+        "role": "secondary",
+        "displayName": "blue-branch-6",
+        "tonalRamp": [
+          "oklch(15.00% 0.0362 244.23)",
+          "oklch(26.43% 0.0362 244.23)",
+          "oklch(37.86% 0.0362 244.23)",
+          "oklch(49.29% 0.0362 244.23)",
+          "oklch(60.71% 0.0362 244.23)",
+          "oklch(72.14% 0.0362 244.23)",
+          "oklch(83.57% 0.0362 244.23)",
+          "oklch(95.00% 0.0362 244.23)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "dark-paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0081 169.70)",
+          "oklch(26.43% 0.0081 169.70)",
+          "oklch(37.86% 0.0081 169.70)",
+          "oklch(49.29% 0.0081 169.70)",
+          "oklch(60.71% 0.0081 169.70)",
+          "oklch(72.14% 0.0081 169.70)",
+          "oklch(83.57% 0.0081 169.70)",
+          "oklch(95.00% 0.0081 169.70)"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "dark-surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0111 167.91)",
+          "oklch(26.43% 0.0111 167.91)",
+          "oklch(37.86% 0.0111 167.91)",
+          "oklch(49.29% 0.0111 167.91)",
+          "oklch(60.71% 0.0111 167.91)",
+          "oklch(72.14% 0.0111 167.91)",
+          "oklch(83.57% 0.0111 167.91)",
+          "oklch(95.00% 0.0111 167.91)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "dark-ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0152 90.24)",
+          "oklch(26.43% 0.0152 90.24)",
+          "oklch(37.86% 0.0152 90.24)",
+          "oklch(49.29% 0.0152 90.24)",
+          "oklch(60.71% 0.0152 90.24)",
+          "oklch(72.14% 0.0152 90.24)",
+          "oklch(83.57% 0.0152 90.24)",
+          "oklch(95.00% 0.0152 90.24)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "dark-muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0149 128.67)",
+          "oklch(26.43% 0.0149 128.67)",
+          "oklch(37.86% 0.0149 128.67)",
+          "oklch(49.29% 0.0149 128.67)",
+          "oklch(60.71% 0.0149 128.67)",
+          "oklch(72.14% 0.0149 128.67)",
+          "oklch(83.57% 0.0149 128.67)",
+          "oklch(95.00% 0.0149 128.67)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "dark-line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0219 150.16)",
+          "oklch(26.43% 0.0219 150.16)",
+          "oklch(37.86% 0.0219 150.16)",
+          "oklch(49.29% 0.0219 150.16)",
+          "oklch(60.71% 0.0219 150.16)",
+          "oklch(72.14% 0.0219 150.16)",
+          "oklch(83.57% 0.0219 150.16)",
+          "oklch(95.00% 0.0219 150.16)"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "dark-accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.0563 238.59)",
+          "oklch(26.43% 0.0563 238.59)",
+          "oklch(37.86% 0.0563 238.59)",
+          "oklch(49.29% 0.0563 238.59)",
+          "oklch(60.71% 0.0563 238.59)",
+          "oklch(72.14% 0.0563 238.59)",
+          "oklch(83.57% 0.0563 238.59)",
+          "oklch(95.00% 0.0563 238.59)"
+        ]
+      },
+      "dark-pale": {
+        "role": "neutral",
+        "displayName": "dark-pale",
+        "tonalRamp": [
+          "oklch(15.00% 0.0265 177.74)",
+          "oklch(26.43% 0.0265 177.74)",
+          "oklch(37.86% 0.0265 177.74)",
+          "oklch(49.29% 0.0265 177.74)",
+          "oklch(60.71% 0.0265 177.74)",
+          "oklch(72.14% 0.0265 177.74)",
+          "oklch(83.57% 0.0265 177.74)",
+          "oklch(95.00% 0.0265 177.74)"
+        ]
+      },
+      "dark-branch-1": {
+        "role": "secondary",
+        "displayName": "dark-branch-1",
+        "tonalRamp": [
+          "oklch(15.00% 0.0625 244.93)",
+          "oklch(26.43% 0.0625 244.93)",
+          "oklch(37.86% 0.0625 244.93)",
+          "oklch(49.29% 0.0625 244.93)",
+          "oklch(60.71% 0.0625 244.93)",
+          "oklch(72.14% 0.0625 244.93)",
+          "oklch(83.57% 0.0625 244.93)",
+          "oklch(95.00% 0.0625 244.93)"
+        ]
+      },
+      "dark-branch-2": {
+        "role": "secondary",
+        "displayName": "dark-branch-2",
+        "tonalRamp": [
+          "oklch(15.00% 0.0620 130.23)",
+          "oklch(26.43% 0.0620 130.23)",
+          "oklch(37.86% 0.0620 130.23)",
+          "oklch(49.29% 0.0620 130.23)",
+          "oklch(60.71% 0.0620 130.23)",
+          "oklch(72.14% 0.0620 130.23)",
+          "oklch(83.57% 0.0620 130.23)",
+          "oklch(95.00% 0.0620 130.23)"
+        ]
+      },
+      "dark-branch-3": {
+        "role": "secondary",
+        "displayName": "dark-branch-3",
+        "tonalRamp": [
+          "oklch(15.00% 0.0857 71.33)",
+          "oklch(26.43% 0.0857 71.33)",
+          "oklch(37.86% 0.0857 71.33)",
+          "oklch(49.29% 0.0857 71.33)",
+          "oklch(60.71% 0.0857 71.33)",
+          "oklch(72.14% 0.0857 71.33)",
+          "oklch(83.57% 0.0857 71.33)",
+          "oklch(95.00% 0.0857 71.33)"
+        ]
+      },
+      "dark-branch-4": {
+        "role": "secondary",
+        "displayName": "dark-branch-4",
+        "tonalRamp": [
+          "oklch(15.00% 0.0638 310.59)",
+          "oklch(26.43% 0.0638 310.59)",
+          "oklch(37.86% 0.0638 310.59)",
+          "oklch(49.29% 0.0638 310.59)",
+          "oklch(60.71% 0.0638 310.59)",
+          "oklch(72.14% 0.0638 310.59)",
+          "oklch(83.57% 0.0638 310.59)",
+          "oklch(95.00% 0.0638 310.59)"
+        ]
+      },
+      "dark-branch-5": {
+        "role": "secondary",
+        "displayName": "dark-branch-5",
+        "tonalRamp": [
+          "oklch(15.00% 0.0633 187.02)",
+          "oklch(26.43% 0.0633 187.02)",
+          "oklch(37.86% 0.0633 187.02)",
+          "oklch(49.29% 0.0633 187.02)",
+          "oklch(60.71% 0.0633 187.02)",
+          "oklch(72.14% 0.0633 187.02)",
+          "oklch(83.57% 0.0633 187.02)",
+          "oklch(95.00% 0.0633 187.02)"
+        ]
+      },
+      "dark-branch-6": {
+        "role": "secondary",
+        "displayName": "dark-branch-6",
+        "tonalRamp": [
+          "oklch(15.00% 0.0662 23.32)",
+          "oklch(26.43% 0.0662 23.32)",
+          "oklch(37.86% 0.0662 23.32)",
+          "oklch(49.29% 0.0662 23.32)",
+          "oklch(60.71% 0.0662 23.32)",
+          "oklch(72.14% 0.0662 23.32)",
+          "oklch(83.57% 0.0662 23.32)",
+          "oklch(95.00% 0.0662 23.32)"
+        ]
+      },
+      "positive-alert-light": {
+        "role": "secondary",
+        "displayName": "positive-alert-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1355 27.04)",
+          "oklch(26.43% 0.1355 27.04)",
+          "oklch(37.86% 0.1355 27.04)",
+          "oklch(49.29% 0.1355 27.04)",
+          "oklch(60.71% 0.1355 27.04)",
+          "oklch(72.14% 0.1355 27.04)",
+          "oklch(83.57% 0.1355 27.04)",
+          "oklch(95.00% 0.1355 27.04)"
+        ]
+      },
+      "positive-alert-dark": {
+        "role": "secondary",
+        "displayName": "positive-alert-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0772 30.77)",
+          "oklch(26.43% 0.0772 30.77)",
+          "oklch(37.86% 0.0772 30.77)",
+          "oklch(49.29% 0.0772 30.77)",
+          "oklch(60.71% 0.0772 30.77)",
+          "oklch(72.14% 0.0772 30.77)",
+          "oklch(83.57% 0.0772 30.77)",
+          "oklch(95.00% 0.0772 30.77)"
+        ]
+      },
+      "negative-light": {
+        "role": "secondary",
+        "displayName": "negative-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0730 157.22)",
+          "oklch(26.43% 0.0730 157.22)",
+          "oklch(37.86% 0.0730 157.22)",
+          "oklch(49.29% 0.0730 157.22)",
+          "oklch(60.71% 0.0730 157.22)",
+          "oklch(72.14% 0.0730 157.22)",
+          "oklch(83.57% 0.0730 157.22)",
+          "oklch(95.00% 0.0730 157.22)"
+        ]
+      },
+      "negative-dark": {
+        "role": "secondary",
+        "displayName": "negative-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0640 156.13)",
+          "oklch(26.43% 0.0640 156.13)",
+          "oklch(37.86% 0.0640 156.13)",
+          "oklch(49.29% 0.0640 156.13)",
+          "oklch(60.71% 0.0640 156.13)",
+          "oklch(72.14% 0.0640 156.13)",
+          "oklch(83.57% 0.0640 156.13)",
+          "oklch(95.00% 0.0640 156.13)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "display",
+        "purpose": "金额／图表数字"
+      },
+      "headline": {
+        "displayName": "headline",
+        "purpose": "中文与界面文字"
+      },
+      "page-title": {
+        "displayName": "page-title",
+        "purpose": "中文与界面文字"
+      },
+      "section-title": {
+        "displayName": "section-title",
+        "purpose": "中文与界面文字"
+      },
+      "row-title": {
+        "displayName": "row-title",
+        "purpose": "中文与界面文字"
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "中文与界面文字"
+      },
+      "input": {
+        "displayName": "input",
+        "purpose": "中文与界面文字"
+      },
+      "button": {
+        "displayName": "button",
+        "purpose": "中文与界面文字"
+      },
+      "action": {
+        "displayName": "action",
+        "purpose": "中文与界面文字"
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "中文与界面文字"
+      },
+      "caption": {
+        "displayName": "caption",
+        "purpose": "中文与界面文字"
+      },
+      "timestamp": {
+        "displayName": "timestamp",
+        "purpose": "中文与界面文字"
+      },
+      "metric": {
+        "displayName": "metric",
+        "purpose": "金额／图表数字"
+      },
+      "balance-row": {
+        "displayName": "balance-row",
+        "purpose": "金额／图表数字"
+      },
+      "holding-value": {
+        "displayName": "holding-value",
+        "purpose": "金额／图表数字"
+      },
+      "chart-axis": {
+        "displayName": "chart-axis",
+        "purpose": "金额／图表数字"
+      },
+      "chart-value": {
+        "displayName": "chart-value",
+        "purpose": "金额／图表数字"
+      },
+      "sankey-source-value": {
+        "displayName": "sankey-source-value",
+        "purpose": "金额／图表数字"
+      },
+      "sankey-branch-value": {
+        "displayName": "sankey-branch-value",
+        "purpose": "金额／图表数字"
+      }
+    },
+    "shadows": [
+      {
+        "name": "button-elevation",
+        "value": "0",
+        "purpose": "原生按钮不抬升。"
+      },
+      {
+        "name": "dialog-dim",
+        "value": "0.24",
+        "purpose": "编辑面板的窗口背景遮罩。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "stable-pencil",
+        "value": "deterministic",
+        "purpose": "原生纹理与路径在重绘中保持稳定，触摸反馈使用平台涟漪。"
+      }
+    ],
+    "breakpoints": [],
+    "nativeShapes": {
+      "frameCornerControlMax": "8dp",
+      "frameWaveMax": "1dp",
+      "controlStroke": "1.05dp",
+      "sankeyNodeStroke": "1.3dp",
+      "sankeyRibbonStroke": "1.15dp",
+      "pencilStroke": "0.55dp",
+      "pencilSpacing": "2.3dp"
+    },
+    "previewNotes": "CSS px 仅作设计面板对照；Android 使用 dp/sp。浏览器需本地字体才能显示准确字形，否则使用 cursive 回退；不加载网络字体。OKLCH tonalRamp 为面板色阶，不是新增运行时配色。"
+  },
+  "components": [
+    {
+      "name": "主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "浅填色与自然边框；网页状态用于面板交互对照。",
+      "html": "<div class=\"ds-preview\"><button class=\"ds-control ds-active\">保存账户</button></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}"
+    },
+    {
+      "name": "次按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "纸色表面，不使用实心钴蓝。",
+      "html": "<div class=\"ds-preview\"><button class=\"ds-control\">管理此账户</button></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}"
+    },
+    {
+      "name": "输入字段",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "字段上方有独立标签。",
+      "html": "<div class=\"ds-preview\"><label>账户名称<br><input class=\"ds-control ds-input\" value=\"日常资金\" aria-label=\"账户名称\"></label></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}.ds-input{margin-top:8px;background:var(--ds-paper);font-size:16px;min-height:26px}"
+    },
+    {
+      "name": "四栏导航",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "选中框只覆盖图标区；原生整项为触点。",
+      "html": "<div class=\"ds-preview\"><nav class=\"ds-nav\" aria-label=\"主导航\"><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M5 18V10M12 18V5M19 18V8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/></svg></span>总览</button><button class=\"ds-nav-item\" aria-current=\"page\"><span class=\"ds-nav-icon ds-active\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M5 18V10M12 18V5M19 18V8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/></svg></span>统计</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M5 18V10M12 18V5M19 18V8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/></svg></span>持仓</button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M5 18V10M12 18V5M19 18V8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/></svg></span>账户</button></nav></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}.ds-nav{display:flex;gap:8px}.ds-nav-item{flex:1;min-height:64px;border:0;background:transparent;color:var(--ds-muted);font:11px \"LXGW WenKai\",cursive}.ds-nav-icon{display:flex;align-items:center;justify-content:center;margin:0 auto 5px;width:56px;height:32px}.ds-nav-icon.ds-active{border:1px solid var(--ds-muted);border-radius:8px 7px;color:var(--ds-accent)}.ds-nav-item:hover{color:var(--ds-accent)}.ds-nav-item:focus-visible{outline:2px solid var(--ds-accent)}.ds-nav-item:active{opacity:.8}"
+    },
+    {
+      "name": "范围选择",
+      "kind": "chip",
+      "refersTo": "range-active",
+      "description": "选择强调保持轻量，操作至少 48px。",
+      "html": "<div class=\"ds-preview\"><div class=\"ds-range\" role=\"group\" aria-label=\"日期范围\"><button class=\"ds-control\">近 7 天</button><button class=\"ds-control ds-active\" aria-pressed=\"true\">近 30 天</button><button class=\"ds-control\">全部</button></div></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}.ds-range{display:flex;gap:4px}.ds-range button{flex:1;min-height:48px;font-size:13px}"
+    },
+    {
+      "name": "市场摘要",
+      "kind": "card",
+      "refersTo": "market-summary",
+      "description": "示例数据；层次来自边框、间距和手写数字。",
+      "html": "<div class=\"ds-preview\"><div class=\"ds-control ds-summary\"><div><small>较昨收变动</small><p class=\"ds-number\">+3,100.00</p></div><div><small>持仓浮盈</small><p class=\"ds-number\">+35,420.00</p></div></div><p class=\"ds-note\">设计示例 · 不计入你的资产</p></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}.ds-summary{display:flex;gap:20px;padding:18px}.ds-summary p{font-size:20px;margin:8px 0 0}.ds-summary small{color:var(--ds-muted)}"
+    },
+    {
+      "name": "两种手帐",
+      "kind": "card",
+      "refersTo": "style-choice",
+      "description": "同一字体、边框与布局，展示两套浅色风格；系统深色目前共用。",
+      "html": "<div class=\"ds-preview\"><button class=\"ds-control ds-active\">彩铅手帐 · 使用中</button><p class=\"ds-note\">暖纸 · 彩色铅笔 · 自然手写</p></div><div class=\"ds-preview ds-blue\"><button class=\"ds-control\">蓝墨手帐</button><p class=\"ds-note\">冷纸 · 蓝色墨水 · 自然手写</p></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}"
+    },
+    {
+      "name": "总资产共同源桑基图",
+      "kind": "custom",
+      "refersTo": "sankey-source",
+      "description": "比例为 60/25/15 的静态设计示例；标签框高度不代表金额。原生点选与精确明细以源码和 QA 为准。",
+      "html": "<div class=\"ds-preview\"><p class=\"ds-note\">设计示例 · 当前资产构成</p><svg viewBox=\"0 0 360 330\" role=\"img\" aria-label=\"设计示例，总资产100000元，银行60000元，持仓25000元，现金15000元。\"><defs><pattern id=\"ds-pencil\" width=\"4\" height=\"4\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(35)\"><path d=\"M0 0V4\" stroke=\"currentColor\" stroke-width=\".55\" opacity=\".14\"/></pattern></defs><g class=\"ds-ribbons\"><path class=\"ds-bank\" d=\"M99 85C165 85 195 25 266 25L266 121C195 121 165 181 99 181Z\"/><path class=\"ds-stock\" d=\"M99 181C165 181 195 179 266 179L266 219C195 219 165 221 99 221Z\"/><path class=\"ds-cash\" d=\"M99 221C165 221 195 277 266 277L266 301C195 301 165 245 99 245Z\"/></g><g fill=\"url(#ds-pencil)\"><path d=\"M99 85C165 85 195 25 266 25L266 121C195 121 165 181 99 181Z\"/><path d=\"M99 181C165 181 195 179 266 179L266 219C195 219 165 221 99 221Z\"/></g><g class=\"ds-box\"><path d=\"M10 85Q50 83 94 85Q100 85 100 93L100 238Q100 246 92 245L11 245Q3 245 3 237L3 94Q2 85 10 85Z\"/><rect x=\"265\" y=\"25\" width=\"92\" height=\"96\" rx=\"8\"/><rect x=\"265\" y=\"173\" width=\"92\" height=\"52\" rx=\"8\"/><rect x=\"265\" y=\"263\" width=\"92\" height=\"52\" rx=\"8\"/></g><g class=\"ds-label\"><text x=\"52\" y=\"145\">总资产</text><text x=\"52\" y=\"177\" class=\"ds-number ds-total\">10.00万</text><path d=\"M17 190L87 189\" stroke=\"currentColor\"/><text x=\"52\" y=\"212\" class=\"ds-number\">100%</text><text x=\"311\" y=\"67\">银行存款</text><text x=\"311\" y=\"92\" class=\"ds-number\">6.00万</text><text x=\"311\" y=\"195\">证券持仓</text><text x=\"311\" y=\"216\" class=\"ds-number\">2.50万</text><text x=\"311\" y=\"285\">证券现金</text><text x=\"311\" y=\"306\" class=\"ds-number\">1.50万</text></g></svg><p class=\"ds-check\">分支合计 <span class=\"ds-number\">100,000.00 CNY</span></p></div>",
+      "css": ".ds-preview{--ds-paper:#FCFAF4;--ds-surface:#FFFEF9;--ds-ink:#30332D;--ds-muted:#666B5F;--ds-accent:#316A94;--ds-pale:#E4EDD9;--ds-bank:#397EB5;--ds-stock:#809A53;--ds-cash:#C08B42;background:var(--ds-paper);color:var(--ds-ink);font-family:\"LXGW WenKai\",cursive;padding:16px;max-width:380px}.ds-preview.ds-blue{--ds-paper:#F4F7FA;--ds-surface:#FCFDFF;--ds-ink:#203C52;--ds-muted:#526777;--ds-accent:#275D86;--ds-pale:#DFEAF3;--ds-bank:#3679AA;--ds-stock:#588DA1;--ds-cash:#6B78A4}@media(prefers-color-scheme:dark){.ds-preview,.ds-preview.ds-blue{--ds-paper:#202523;--ds-surface:#282F2C;--ds-ink:#F4F0E5;--ds-muted:#BABFB5;--ds-accent:#A4CBE6;--ds-pale:#354944;--ds-bank:#96BCDD;--ds-stock:#B6CCA2;--ds-cash:#E3B782}}.ds-number{font-family:\"Patrick Hand\",cursive;font-weight:400}.ds-control{font:inherit;color:var(--ds-ink);border:1.05px solid var(--ds-muted);border-radius:8px 7px 9px 6px / 7px 9px 6px 8px;background:var(--ds-surface);padding:10px 12px;min-height:52px}.ds-control:hover{background:var(--ds-pale)}.ds-control:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}.ds-control:active{opacity:.8}.ds-active{background:var(--ds-pale)}.ds-note{font-size:11px;color:var(--ds-muted)}.ds-preview svg{max-width:100%}.ds-ribbons path{fill-opacity:.216;stroke-width:1.15}.ds-bank{fill:var(--ds-bank);stroke:var(--ds-bank)}.ds-stock{fill:var(--ds-stock);stroke:var(--ds-stock)}.ds-cash{fill:var(--ds-cash);stroke:var(--ds-cash)}.ds-box{fill:var(--ds-surface);stroke:var(--ds-ink);stroke-width:1.3}.ds-label{fill:var(--ds-ink);text-anchor:middle;font-size:12px}.ds-label .ds-number{font-size:17px}.ds-label .ds-total{font-size:24px}.ds-check{display:flex;justify-content:space-between;font-size:12px}.ds-check span{font-size:17px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "手绘资产手帐",
+    "overview": "以自然手写文字、纸面和有轻微起伏的边框组织可核对的私人资产。彩铅手帐使用暖纸和彩色铅笔，蓝墨手帐使用冷纸与蓝色墨水；两者共享布局、字体与交互。用户提供的手绘参考是当前视觉方向，旧版 Paper / Graphite / Cobalt 已退出活动规范。\n\n手绘感来自程序化路径和稳定纹理，不来自随机移动的数据边界。信息仍按名称、金额、状态分层；深色模式保持同一结构，目前两种风格共用一套深色配色。网页组件仅是原生界面的设计对照，不能替代 Android 运行验证。",
+    "keyCharacteristics": [
+      "文楷承载中文，Patrick Hand 承载金额和图表数字。",
+      "纸纹、自然边框与柔和铅笔填充贯穿主页面、图表、表单和对话框。",
+      "色带比例保持真实，名称与精确金额始终可核对。",
+      "界面风格全局保存；金额隐私、系统字号和原生返回保持可用。"
+    ],
+    "rules": [
+      {
+        "name": "色彩有口径",
+        "body": "操作、分类与涨跌分别有明确名称和数值，不单独依赖颜色表达意义。",
+        "section": "colors"
+      },
+      {
+        "name": "数字可核对",
+        "body": "图内可用万／亿简写，图下保留两位小数的精确合计与选中金额。",
+        "section": "typography"
+      },
+      {
+        "name": "稳定笔迹",
+        "body": "手绘路径是确定的，重绘和选中不能让金额边界跳动。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 使用统一的文楷文字和 Patrick Hand 金额，保留两位小数与分组逗号。",
+      "Do 通过边框、间距和数值层级建立秩序，保持手绘笔迹稳定。",
+      "Do 同时保留分类名称、金额与占比，并区分当前构成与历史变化。",
+      "Do 保留 48dp 操作触点、中文内容描述和隐藏金额状态。",
+      "Do 在原生 Android 检查配色、字号、键盘与长金额，再记录验证结果。"
+    ],
+    "donts": [
+      "Don't 沿用旧版 Manrope 或钴蓝实心主按钮作为当前默认。",
+      "Don't 通过增宽小额色带、改变弧段面积或随机抖动数据端点美化比例。",
+      "Don't 把手绘标签框高度当作金额比例，或把当前构成称为历史现金流。",
+      "Don't 将示例、网页预览或仅有源码支持的行为写成真机验证结论。"
+    ]
+  }
+}

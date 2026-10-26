@@ -1,0 +1,25 @@
+.DS_Store
+.gradle/
+.idea/
+.local/
+local.properties
+**/build/
+*.iml
+__pycache__/
+*.pyc
+
+.ruff_cache/
+*.apk
+*.idsig
+*.p12
+*.jks
+*.keystore
+.env
+.env.*
+# Local QA evidence can contain personal ledger information or reference images.
+docs/*
+!docs/BUILD.md
+!docs/FONTS.md
+!docs/releases/
+
+.impeccable/review/

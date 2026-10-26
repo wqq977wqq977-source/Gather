@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.qianwang.privatewealth'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.qianwang.privatewealth'
+        minSdk 26
+        targetSdk 35
+        versionCode 7
+        versionName '0.6.1'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // Reuse the offline builder's identity so Android Studio builds can update it.
+    def localKey = rootProject.file('.local/signing/guilong-debug.p12')
+    def localPassword = rootProject.file('.local/signing/password.txt')
+    if (localKey.exists() && localPassword.exists()) {
+        signingConfigs {
+            localDebug {
+                storeFile localKey
+                storePassword localPassword.text.trim()
+                keyAlias 'guilong-debug'
+                keyPassword localPassword.text.trim()
+                storeType 'PKCS12'
+            }
+        }
+        buildTypes {
+            debug {
+                signingConfig signingConfigs.localDebug
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
