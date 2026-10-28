@@ -57,6 +57,10 @@ public class MainActivity extends Activity {
     @Override protected void onPause(){super.onPause();app.listeners.remove(onUpdate);handler.removeCallbacks(ticker);}
     @Override protected void onSaveInstanceState(Bundle out){out.putStringArrayList("sankeyPath",sankeyPath);out.putBoolean("sankeyPage",sankeyPage);out.putString("sankeyAccountKey",sankeyAccountKey);out.putInt("sankeyCategory",sankeyCategory);out.putInt("statisticsDays",statisticsDays);out.putBoolean("dailyPage",dailyPage);out.putInt("dailyOffset",dailyOffset);out.putBoolean("preview",preview);out.putInt("tab",tab);out.putString("detail",detailId);super.onSaveInstanceState(out);}
     @Override public void onBackPressed(){if(detailId!=null){detailId=null;render();}else if(sankeyPage){if(!sankeyPath.isEmpty())sankeyPath.remove(sankeyPath.size()-1);else sankeyPage=false;sankeyAccountKey=null;render();}else if(dailyPage){dailyPage=false;render();}else if(tab!=0){tab=0;render();}else if(preview)exitPreview();else super.onBackPressed();}
+    @Override public void onWindowFocusChanged(boolean focused){super.onWindowFocusChanged(focused);if(focused)applySystemBars(getWindow());}
+    private void applySystemBars(Window window){
+        if(android.os.Build.VERSION.SDK_INT>=30){android.view.WindowInsetsController c=window.getInsetsController();if(c!=null){int mask=android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS|android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;c.setSystemBarsAppearance(night?0:mask,mask);}}else window.getDecorView().setSystemUiVisibility(night?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+    }
     private void palette(){
         night=(getResources().getConfiguration().uiMode&Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES;
         sketch=new SketchStyle(this);bg=sketch.paper;surface=sketch.surface;ink=sketch.ink;muted=sketch.muted;line=sketch.line;accent=sketch.accent;pale=sketch.pale;
@@ -69,7 +73,7 @@ public class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         getWindow().setStatusBarColor(Color.TRANSPARENT);getWindow().setNavigationBarColor(surface);
         getWindow().getDecorView().setSystemUiVisibility(night?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        setContentView(root);root.requestApplyInsets();
+        setContentView(root);root.requestApplyInsets();root.post(()->applySystemBars(getWindow()));
         LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(24),dp(4),dp(12),dp(4));
         if(detailId!=null||dailyPage||sankeyPage)top.addView(iconButton("back","返回",()->{if(detailId!=null)detailId=null;else if(sankeyPage&&!sankeyPath.isEmpty()){sankeyPath.remove(sankeyPath.size()-1);sankeyAccountKey=null;}else {dailyPage=false;sankeyPage=false;}render();}));
         else if(tab==0){Icon mark=new Icon(this,"mark",ink);top.addView(mark,new LinearLayout.LayoutParams(dp(24),dp(24)));Space gap=new Space(this);top.addView(gap,new LinearLayout.LayoutParams(dp(10),1));}
@@ -141,26 +145,16 @@ public class MainActivity extends Activity {
         panel.addView(legend,weight());body.addView(panel);
     }
     private void sankey(){
-        AssetTree.Node rootNode=AssetTree.build(store.accounts,store.holdings,sankeyByAccount),current=rootNode;
-        ArrayList<AssetTree.Node> trail=new ArrayList<>();trail.add(rootNode);int valid=0;
-        for(String key:sankeyPath){AssetTree.Node match=null;for(AssetTree.Node n:AssetTree.visible(current))if(n.key.equals(key))match=n;if(match==null)break;current=match;trail.add(current);valid++;}while(sankeyPath.size()>valid)sankeyPath.remove(sankeyPath.size()-1);
-        LinearLayout modes=row();String[] labels={"按类别","按账户"};for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(labels[i],14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setOnClickListener(v->{sankeyByAccount=accounts;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();sankeyPath.clear();sankeyAccountKey=null;render();});option.setFocusable(true);modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
-        HorizontalScrollView breadcrumbs=new HorizontalScrollView(this);breadcrumbs.setHorizontalScrollBarEnabled(false);LinearLayout path=row();for(int i=0;i<trail.size();i++){final int level=i;if(i>0)path.addView(text(" › ",15,muted,false));path.addView(textAction(trail.get(i).name,()->{while(sankeyPath.size()>level)sankeyPath.remove(sankeyPath.size()-1);sankeyAccountKey=null;render();}));}breadcrumbs.addView(path);body.addView(breadcrumbs);
-        LinearLayout note=row();note.setGravity(Gravity.CENTER_VERTICAL);note.addView(text("点分支，逐层看到账户和每笔持仓",12,muted,false),weight());note.addView(iconButton("info","桑基图说明",()->message("总资产 → 类别 / 账户 → 现金与每笔持仓。点分支后选择展开，顶部路径可返回任一层。\n\n每层色带总额守恒，表示当前资产分配，不是历史现金流。超过六项时保留前五项并汇入其余项，可继续展开。\n\n股票与数字货币分开归类，报价不足时按成本估值。金额随显示币种折算，比例按原始金额计算。")));body.addView(note);
-        if(store.accounts.isEmpty()){primary(body,"添加账户",()->accountForm(null),true);return;}
-        int categoryColor=-1;for(AssetTree.Node step:trail)if(AssetTree.categoryColor(step.key)>=0)categoryColor=AssetTree.categoryColor(step.key);
-        final AssetTree.Node node=current;List<AssetTree.Node> children=AssetTree.visible(node);SankeyView chart=new SankeyView(this,node,money,categoryColor,figures,sketch.colors(),ink,muted,line,accent,pale,hidden);body.addView(chart,new LinearLayout.LayoutParams(-1,chart.desiredHeight()));space(body,12);
-        LinearLayout sum=row();sum.addView(text("本层合计",12,muted,false),weight());TextView exact=number(amount(node.value)+" "+money.code(),17,ink);exact.setGravity(Gravity.END);sum.addView(exact,weight());body.addView(sum);space(body,14);
-        LinearLayout detail=column();body.addView(detail);int selected=-1;for(int i=0;i<children.size();i++)if(children.get(i).key.equals(sankeyAccountKey))selected=i;chart.setSelection(selected);treeSelection(detail,children,selected,node,rootNode.value,chart);
-        chart.setListener(index->{sankeyAccountKey=index<0?null:children.get(index).key;treeSelection(detail,children,index,node,rootNode.value,chart);});
+        sankeyPath.clear();
+        AssetTree.Node data=AssetTree.build(store.accounts,store.holdings,sankeyByAccount);
+        LinearLayout modes=row();for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(accounts?"按账户":"按类别",14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setFocusable(true);option.setOnClickListener(v->{sankeyByAccount=accounts;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();render();});modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
+        space(body,12);body.addView(text(sankeyByAccount?"总资产 → 账户 → 现金与持仓":"总资产 → 类别 → 账户 → 现金与持仓",13,ink,false));space(body,8);body.addView(text("所有层级同时展开，点节点查看金额与归属。",12,muted,false));
+        MultiLayerSankeyView chart=new MultiLayerSankeyView(this,data,money,figures,hidden,sankeyByAccount);
+        HorizontalScrollView canvas=new HorizontalScrollView(this);canvas.setFillViewport(true);canvas.setHorizontalScrollBarEnabled(true);canvas.addView(chart,new android.widget.FrameLayout.LayoutParams(-1,chart.desiredHeight()));
+        LinearLayout tools=row();TextView zoom=textAction("放大细看 ↔",()->{});final boolean[] expanded={false};zoom.setOnClickListener(v->{expanded[0]=!expanded[0];chart.setLayoutParams(new android.widget.FrameLayout.LayoutParams(expanded[0]?chart.detailWidth():-1,chart.desiredHeight()));canvas.scrollTo(0,0);zoom.setText(expanded[0]?"适合屏幕":"放大细看 ↔");});tools.addView(zoom);tools.addView(iconButton("info","桑基图说明",()->message("每一列在同一张图中连续连接，所有分支默认展开。放大后可左右滑动查看；上下滑动查看较多持仓。点节点只选择和高亮归属，不会切换层级。\n\n同一账户可能出现在多个类别下，每处只计入该类别的资产，各列总额相同。这是当前资产构成，不是历史现金流。")));body.addView(tools);body.addView(canvas);space(body,12);
+        body.addView(number("总资产  "+amount(data.value)+" "+money.code(),20,ink));space(body,12);LinearLayout detail=column();body.addView(detail);detail.addView(text("点任一节点，查看精确金额。",12,muted,false));
+        chart.setListener(node->{detail.removeAllViews();if(node==null){detail.addView(text("点任一节点，查看精确金额。",12,muted,false));return;}detail.addView(text(node.name,18,ink,true));detail.addView(number(amount(node.value)+" "+money.code(),24,ink));detail.addView(text(hidden?"比例已隐藏":"占总资产 "+AssetTree.share(node.value,data.value),12,muted,false));detail.addView(textAction("清除选择",chart::clearSelection));if(node.holdingId!=null)primary(detail,"查看持仓",()->holdingDetail(store.holdingById(node.holdingId)),false);else if(node.accountId!=null)primary(detail,"管理账户",()->{detailId=node.accountId;render();},false);});
         space(body,14);quoteLine();
-    }
-    private void treeSelection(LinearLayout panel,List<AssetTree.Node> children,int index,AssetTree.Node parent,long total,SankeyView chart){
-        panel.removeAllViews();if(index<0){panel.addView(text(parent.value==0?"暂无可绘制的资产":"选择分支，查看精确金额或继续展开。",12,muted,false));return;}
-        AssetTree.Node n=children.get(index);LinearLayout title=row();title.addView(text(n.name,18,ink,true),weight());title.addView(textAction("全部",()->{sankeyAccountKey=null;chart.setSelection(-1);treeSelection(panel,children,-1,parent,total,chart);}));panel.addView(title);space(panel,8);panel.addView(number(amount(n.value)+" "+money.code(),24,ink));space(panel,8);panel.addView(text(hidden?"比例已隐藏":"占本层 "+AssetTree.share(n.value,parent.value)+" · 占总资产 "+AssetTree.share(n.value,total),12,muted,false));space(panel,12);
-        if(!n.children.isEmpty())primary(panel,"展开分支 · "+n.children.size()+" 项",()->{sankeyPath.add(n.key);sankeyAccountKey=null;render();},true);
-        if(n.holdingId!=null)primary(panel,"查看持仓",()->holdingDetail(store.holdingById(n.holdingId)),false);
-        else if(n.accountId!=null){space(panel,8);primary(panel,"管理此账户",()->{detailId=n.accountId;render();},false);}
     }
     private void sankeyAmountRow(LinearLayout parent,String title,long value,Runnable action){
         LinearLayout row=row();row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(48));TextView label=text(title,13,ink,false);label.setPadding(0,dp(8),dp(10),dp(8));row.addView(label,weight());TextView balance=number(amount(value),14,muted);balance.setGravity(Gravity.END);row.addView(balance,weight());if(action!=null){row.setBackground(selectable());row.setOnClickListener(v->action.run());row.setFocusable(true);row.setContentDescription(title+"，"+amount(value)+"，管理账户");}parent.addView(row);divider(parent);
@@ -320,7 +314,7 @@ public class MainActivity extends Activity {
     }
     private void settings(){
         String[] options={"变更记录","导出加密备份","从备份恢复","行情与计算说明","关于Gather","预览示例","界面风格","显示币种"};
-        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.6.1").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
+        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.7.0").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
     }
     private void currencySettings(){
         LinearLayout f=form();label(f,"显示币种");Spinner currency=spinner(new String[]{"人民币 CNY","美元 USD"});currency.setSelection(money.usd?1:0);f.addView(currency);

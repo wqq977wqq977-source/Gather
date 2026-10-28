@@ -38,7 +38,7 @@ public final class QuoteClient {
             String query = String.join(",", items.subList(offset, Math.min(offset+50, items.size())));
             HttpURLConnection con = (HttpURLConnection)new URL("https://qt.gtimg.cn/q=" + query).openConnection();
             con.setConnectTimeout(12000); con.setReadTimeout(12000); con.setInstanceFollowRedirects(false);
-            con.setRequestProperty("User-Agent", "Gather/0.6.1 (Android; personal portfolio)");
+            con.setRequestProperty("User-Agent", "Gather/0.7.0 (Android; personal portfolio)");
             try {
                 if(con.getResponseCode()!=200) throw new IOException("行情服务返回 " + con.getResponseCode());
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -72,7 +72,7 @@ public final class QuoteClient {
         }catch(Exception ignored){/* One malformed coin does not invalidate other quotes. */}}catch(org.json.JSONException ignored){}return result;
     }
     public static String read(String url) throws IOException {
-        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(12000);c.setReadTimeout(12000);c.setInstanceFollowRedirects(false);c.setRequestProperty("User-Agent","Gather/0.6.1 Android");
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(12000);c.setReadTimeout(12000);c.setInstanceFollowRedirects(false);c.setRequestProperty("User-Agent","Gather/0.7.0 Android");
         try{if(c.getResponseCode()!=200)throw new IOException("数据服务返回 "+c.getResponseCode());ByteArrayOutputStream out=new ByteArrayOutputStream();try(InputStream in=c.getInputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){out.write(b,0,n);if(out.size()>1024*1024)throw new IOException("响应过大");}}return new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);}finally{c.disconnect();}
     }
     public static String[] fetchUsdRate() throws Exception {

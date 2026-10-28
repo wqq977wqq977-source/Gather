@@ -33,7 +33,7 @@ export GUILONG_JAVA_HOME="$ANDROID_TOOLS_HOME/jdk-17.0.21+9-jre/Contents/Home"
 ./scripts/build.sh --release
 ```
 
-发行输出：`app/build/outputs/apk/release/Gather-0.6.1-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
+发行输出：`app/build/outputs/apk/release/Gather-0.7.0-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
 
 不传 `--release` 则生成 debug 变体，便于 `run-as` 设备测试。离线工具不下载或修改全局 SDK/JDK。
 
