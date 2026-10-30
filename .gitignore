@@ -21,5 +21,11 @@ docs/*
 !docs/BUILD.md
 !docs/FONTS.md
 !docs/releases/
+!docs/GUIDE.md
+!docs/assets/
+docs/assets/*
+!docs/assets/gather-hero.svg
+!docs/assets/asset-map.svg
 
 .impeccable/review/
+
