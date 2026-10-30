@@ -52,6 +52,11 @@ public final class MultiLayerSankeyView extends View {
     private boolean related(Item a,Item b){for(Item p=a;p!=null;p=p.parent)if(p==b)return true;for(Item p=b;p!=null;p=p.parent)if(p==a)return true;return false;}
     private boolean hit(RectF box,float x,float y){RectF target=new RectF(box);target.inset(-Math.max(0,(dp(48)-box.width())/2),-Math.max(0,(dp(48)-box.height())/2));return target.contains(x,y);}
     private void choose(int index){selected=index;describe();invalidate();if(listener!=null)listener.selected(index<0?null:items.get(index).node);}
+    public String selectedKey(){return selected<0?null:items.get(selected).node.key;}
+    public void selectKey(String key){
+        if(key!=null)for(int i=0;i<items.size();i++)if(items.get(i).node.key.equals(key)){choose(i);return;}
+        choose(-1);
+    }
     public void clearSelection(){choose(-1);}
     private void cycle(int step){choose((selected+1+step+items.size()+1)%(items.size()+1)-1);}
     @Override public boolean onTouchEvent(android.view.MotionEvent e){if(!isClickable())return false;switch(e.getActionMasked()){case MotionEvent.ACTION_DOWN:downX=e.getX();downY=e.getY();moved=false;return true;case MotionEvent.ACTION_MOVE:if(Math.abs(e.getX()-downX)+Math.abs(e.getY()-downY)>ViewConfiguration.get(getContext()).getScaledTouchSlop())moved=true;return true;case MotionEvent.ACTION_UP:if(!moved){boxes();int hit=-1;for(int i=0;i<items.size();i++)if(hit(items.get(i).box,e.getX(),e.getY()))hit=i;choose(hit);touchClick=true;performClick();touchClick=false;}return true;case MotionEvent.ACTION_CANCEL:moved=true;return true;default:return true;}}

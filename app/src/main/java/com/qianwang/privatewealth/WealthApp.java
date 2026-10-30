@@ -7,14 +7,18 @@ import java.util.concurrent.*;
 
 public final class WealthApp extends Application {
     public WealthStore store;
+    BackupWork backup;
     public String loadError;
     public boolean refreshing=false;
     public String quoteStatus="行情随打开自动更新";
     public final List<Runnable> listeners=new ArrayList<>();
+    private int quoteGeneration;
+    void invalidateQuotes(){quoteGeneration++;}
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private final Handler main=new Handler(Looper.getMainLooper());
     @Override public void onCreate() {
         super.onCreate();
+        backup=new BackupWork(this);
         try {store=new WealthStore(this); store.load();}
         catch(Exception e) {loadError="本地数据未能读取，已停止写入。请保留应用数据并从备份恢复。";}
         if(loadError==null) {
@@ -23,7 +27,7 @@ public final class WealthApp extends Application {
         }
     }
     public void refresh(Runnable finished) {
-        if(store==null || loadError!=null || refreshing) {if(finished!=null)finished.run();return;}
+        if(store==null || loadError!=null || refreshing || backup.busy()) {if(finished!=null)finished.run();return;}
         // A daily observation is useful even without stocks or a working quote connection.
         boolean observed;
         try {observed=store.recordToday();}
@@ -31,10 +35,12 @@ public final class WealthApp extends Application {
         if(store.holdings.isEmpty()) {if(observed)notifyListeners();if(finished!=null)finished.run();return;}
         refreshing=true; quoteStatus="正在获取行情…"; notifyListeners();
         List<String> codes=new ArrayList<>(); for(WealthStore.Holding h:store.holdings)codes.add(h.code);
+        final int generation=quoteGeneration;
         executor.execute(()->{
             try {
                 Map<String,QuoteClient.Quote> result=QuoteClient.fetch(codes);
                 main.post(()->{
+                    if(backup.busy()||generation!=quoteGeneration){refreshing=false;notifyListeners();if(finished!=null)finished.run();return;}
                     try {
                         List<WealthStore.Holding> updates=new ArrayList<>();
                         for(WealthStore.Holding h:store.holdings) {

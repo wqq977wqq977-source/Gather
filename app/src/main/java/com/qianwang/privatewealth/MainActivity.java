@@ -34,28 +34,36 @@ public class MainActivity extends Activity {
     private DisplayMoney money;
     private ArrayList<String> sankeyPath=new ArrayList<>();
     private int bg, surface, ink, muted, line, accent, pale, red, negative;
-    private String pendingBackup;
+    private ProgressDialog backupProgress;
+    private AlertDialog backupConfirmation;
+    private boolean choosingBackup;
+    private boolean backupDeferredRender;
+    private MultiLayerSankeyView currentSankey;
+    private HorizontalScrollView sankeyCanvas;
+    private String refreshSelection;
+    private boolean sankeyExpanded;
+    private int refreshSankeyScroll;
     private int statisticsDays=30, dailyOffset=0;
     private boolean dailyPage=false, sankeyPage=false;
     private String sankeyAccountKey; private int sankeyCategory=-1;
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private final Runnable onUpdate=()->{if(!editing&&!preview){int y=viewport==null?0:viewport.getScrollY();render();if(viewport!=null)viewport.post(()->viewport.scrollTo(0,y));}};
-    private final Runnable ticker=new Runnable(){public void run(){if(!preview)app.refresh(null);handler.postDelayed(this,60000);}};
+    private final Runnable onUpdate=()->{if(!editing&&!preview&&!app.backup.busy()){int y=viewport==null?0:viewport.getScrollY();refreshSelection=currentSankey==null?null:currentSankey.selectedKey();refreshSankeyScroll=sankeyCanvas==null?0:sankeyCanvas.getScrollX();render();if(viewport!=null)viewport.post(()->viewport.scrollTo(0,y));}};
+    private final Runnable ticker=new Runnable(){public void run(){if(!preview&&!app.backup.busy())app.refresh(null);handler.postDelayed(this,60000);}};
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         sankeyByAccount=getPreferences(0).getBoolean("sankeyByAccount",false);
         app=(WealthApp)getApplication();store=app.store;
         hidden=getPreferences(0).getBoolean("hide",false);
-        if(saved!=null){ArrayList<String> path=saved.getStringArrayList("sankeyPath");if(path!=null)sankeyPath=path;tab=saved.getInt("tab",0);detailId=saved.getString("detail");sankeyPage=saved.getBoolean("sankeyPage",false);sankeyAccountKey=saved.getString("sankeyAccountKey");sankeyCategory=saved.getInt("sankeyCategory",-1);statisticsDays=saved.getInt("statisticsDays",30);dailyPage=saved.getBoolean("dailyPage",false);dailyOffset=saved.getInt("dailyOffset",0);}
+        if(saved!=null){ArrayList<String> path=saved.getStringArrayList("sankeyPath");if(path!=null)sankeyPath=path;tab=saved.getInt("tab",0);detailId=saved.getString("detail");sankeyPage=saved.getBoolean("sankeyPage",false);sankeyAccountKey=saved.getString("sankeyAccountKey");sankeyCategory=saved.getInt("sankeyCategory",-1);statisticsDays=saved.getInt("statisticsDays",30);dailyPage=saved.getBoolean("dailyPage",false);dailyOffset=saved.getInt("dailyOffset",0);choosingBackup=saved.getBoolean("choosingBackup",false);}
         palette();
         hand=SketchStyle.handwriting(this);figures=SketchStyle.numerals(this);
         if(saved!=null&&saved.getBoolean("preview",false)){createPreview();sankeyPage=saved.getBoolean("sankeyPage",false);}
         render();scheduleQuotes();
     }
-    @Override protected void onResume(){super.onResume();app.listeners.add(onUpdate);handler.post(ticker);}
-    @Override protected void onPause(){super.onPause();app.listeners.remove(onUpdate);handler.removeCallbacks(ticker);}
-    @Override protected void onSaveInstanceState(Bundle out){out.putStringArrayList("sankeyPath",sankeyPath);out.putBoolean("sankeyPage",sankeyPage);out.putString("sankeyAccountKey",sankeyAccountKey);out.putInt("sankeyCategory",sankeyCategory);out.putInt("statisticsDays",statisticsDays);out.putBoolean("dailyPage",dailyPage);out.putInt("dailyOffset",dailyOffset);out.putBoolean("preview",preview);out.putInt("tab",tab);out.putString("detail",detailId);super.onSaveInstanceState(out);}
+    @Override protected void onResume(){super.onResume();app.listeners.add(onUpdate);app.backup.listen(this::backupChanged);handler.post(ticker);}
+    @Override protected void onPause(){super.onPause();app.listeners.remove(onUpdate);app.backup.listen(null);if(backupConfirmation!=null){backupConfirmation.dismiss();backupConfirmation=null;}if(backupProgress!=null){backupProgress.dismiss();backupProgress=null;}handler.removeCallbacks(ticker);}
+    @Override protected void onSaveInstanceState(Bundle out){out.putBoolean("choosingBackup",choosingBackup);out.putStringArrayList("sankeyPath",sankeyPath);out.putBoolean("sankeyPage",sankeyPage);out.putString("sankeyAccountKey",sankeyAccountKey);out.putInt("sankeyCategory",sankeyCategory);out.putInt("statisticsDays",statisticsDays);out.putBoolean("dailyPage",dailyPage);out.putInt("dailyOffset",dailyOffset);out.putBoolean("preview",preview);out.putInt("tab",tab);out.putString("detail",detailId);super.onSaveInstanceState(out);}
     @Override public void onBackPressed(){if(detailId!=null){detailId=null;render();}else if(sankeyPage){if(!sankeyPath.isEmpty())sankeyPath.remove(sankeyPath.size()-1);else sankeyPage=false;sankeyAccountKey=null;render();}else if(dailyPage){dailyPage=false;render();}else if(tab!=0){tab=0;render();}else if(preview)exitPreview();else super.onBackPressed();}
     @Override public void onWindowFocusChanged(boolean focused){super.onWindowFocusChanged(focused);if(focused)applySystemBars(getWindow());}
     private void applySystemBars(Window window){
@@ -68,6 +76,15 @@ public class MainActivity extends Activity {
     }
     private void render(){
         if(isFinishing())return;
+        // Backup workers may hold the store lock or publish restored lists.
+        // Do not read the ledger until their main-thread completion callback.
+        if(app.backup.busy()){
+            backupDeferredRender=true;
+            if(root==null){root=column();root.setBackgroundColor(bg);setContentView(root);}
+            return;
+        }
+        backupDeferredRender=false;
+        currentSankey=null;sankeyCanvas=null;
         try{money=new DisplayMoney(getSharedPreferences("appearance",0).getBoolean("usd",false),getSharedPreferences("appearance",0).getString("fxRate",""));}catch(Exception e){money=new DisplayMoney(false,"");}
         root=column();root.setBackground(sketch.paper(getResources().getDisplayMetrics().density));
         root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
@@ -147,13 +164,14 @@ public class MainActivity extends Activity {
     private void sankey(){
         sankeyPath.clear();
         AssetTree.Node data=AssetTree.build(store.accounts,store.holdings,sankeyByAccount);
-        LinearLayout modes=row();for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(accounts?"按账户":"按类别",14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setFocusable(true);option.setOnClickListener(v->{sankeyByAccount=accounts;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();render();});modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
+        LinearLayout modes=row();for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(accounts?"按账户":"按类别",14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setFocusable(true);option.setOnClickListener(v->{sankeyByAccount=accounts;refreshSelection=null;sankeyExpanded=false;refreshSankeyScroll=0;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();render();});modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
         space(body,12);body.addView(text(sankeyByAccount?"总资产 → 账户 → 现金与持仓":"总资产 → 类别 → 账户 → 现金与持仓",13,ink,false));space(body,8);body.addView(text("所有层级同时展开，点节点查看金额与归属。",12,muted,false));
         MultiLayerSankeyView chart=new MultiLayerSankeyView(this,data,money,figures,hidden,sankeyByAccount);
-        HorizontalScrollView canvas=new HorizontalScrollView(this);canvas.setFillViewport(true);canvas.setHorizontalScrollBarEnabled(true);canvas.addView(chart,new android.widget.FrameLayout.LayoutParams(-1,chart.desiredHeight()));
-        LinearLayout tools=row();TextView zoom=textAction("放大细看 ↔",()->{});final boolean[] expanded={false};zoom.setOnClickListener(v->{expanded[0]=!expanded[0];chart.setLayoutParams(new android.widget.FrameLayout.LayoutParams(expanded[0]?chart.detailWidth():-1,chart.desiredHeight()));canvas.scrollTo(0,0);zoom.setText(expanded[0]?"适合屏幕":"放大细看 ↔");});tools.addView(zoom);tools.addView(iconButton("info","桑基图说明",()->message("每一列在同一张图中连续连接，所有分支默认展开。放大后可左右滑动查看；上下滑动查看较多持仓。点节点只选择和高亮归属，不会切换层级。\n\n同一账户可能出现在多个类别下，每处只计入该类别的资产，各列总额相同。这是当前资产构成，不是历史现金流。")));body.addView(tools);body.addView(canvas);space(body,12);
+        currentSankey=chart;HorizontalScrollView canvas=new HorizontalScrollView(this);sankeyCanvas=canvas;canvas.setFillViewport(true);canvas.setHorizontalScrollBarEnabled(true);canvas.addView(chart,new android.widget.FrameLayout.LayoutParams(sankeyExpanded?chart.detailWidth():-1,chart.desiredHeight()));
+        LinearLayout tools=row();TextView zoom=textAction(sankeyExpanded?"适合屏幕":"放大细看 ↔",()->{});zoom.setOnClickListener(v->{sankeyExpanded=!sankeyExpanded;chart.setLayoutParams(new android.widget.FrameLayout.LayoutParams(sankeyExpanded?chart.detailWidth():-1,chart.desiredHeight()));canvas.scrollTo(0,0);zoom.setText(sankeyExpanded?"适合屏幕":"放大细看 ↔");});tools.addView(zoom);tools.addView(iconButton("info","桑基图说明",()->message("每一列在同一张图中连续连接，所有分支默认展开。放大后可左右滑动查看；上下滑动查看较多持仓。点节点只选择和高亮归属，不会切换层级。\n\n同一账户可能出现在多个类别下，每处只计入该类别的资产，各列总额相同。这是当前资产构成，不是历史现金流。")));body.addView(tools);body.addView(canvas);space(body,12);
         body.addView(number("总资产  "+amount(data.value)+" "+money.code(),20,ink));space(body,12);LinearLayout detail=column();body.addView(detail);detail.addView(text("点任一节点，查看精确金额。",12,muted,false));
         chart.setListener(node->{detail.removeAllViews();if(node==null){detail.addView(text("点任一节点，查看精确金额。",12,muted,false));return;}detail.addView(text(node.name,18,ink,true));detail.addView(number(amount(node.value)+" "+money.code(),24,ink));detail.addView(text(hidden?"比例已隐藏":"占总资产 "+AssetTree.share(node.value,data.value),12,muted,false));detail.addView(textAction("清除选择",chart::clearSelection));if(node.holdingId!=null)primary(detail,"查看持仓",()->holdingDetail(store.holdingById(node.holdingId)),false);else if(node.accountId!=null)primary(detail,"管理账户",()->{detailId=node.accountId;render();},false);});
+        chart.selectKey(refreshSelection);refreshSelection=null;int scroll=refreshSankeyScroll;refreshSankeyScroll=0;canvas.post(()->canvas.scrollTo(scroll,0));
         space(body,14);quoteLine();
     }
     private void sankeyAmountRow(LinearLayout parent,String title,long value,Runnable action){
@@ -314,7 +332,7 @@ public class MainActivity extends Activity {
     }
     private void settings(){
         String[] options={"变更记录","导出加密备份","从备份恢复","行情与计算说明","关于Gather","预览示例","界面风格","显示币种"};
-        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.7.0").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
+        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.7.1").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
     }
     private void currencySettings(){
         LinearLayout f=form();label(f,"显示币种");Spinner currency=spinner(new String[]{"人民币 CNY","美元 USD"});currency.setSelection(money.usd?1:0);f.addView(currency);
@@ -347,32 +365,45 @@ public class MainActivity extends Activity {
     private void quoteInfo(){
         new HandDialogBuilder().setTitle("行情与计算").setMessage("行情来源：A 股 / ETF 使用腾讯行情；数字货币使用 CoinGecko 人民币快照。\n\n打开 App 自动刷新，前台每 60 秒检查一次；后台由 Android 择机更新，不能保证准点。每笔持仓展示报价时间，断网时保留上次报价。公共接口可能延迟或不可用。\n\n总资产 = 所有账户现金 + 持仓市值。\n持仓浮盈 = 当前市值 − 录入成本。\n股票较昨收变动 = 当前数量 ×（现价 − 昨收）；数字货币显示 24 小时涨跌。行情变动合计混合这两种周期，只供观察，不是投资收益。不含日内交易、手续费、分红或已实现收益。\n\n无有效报价时暂按成本估值。股票数量、成本及证券可用现金需要你手动核对；本工具不自动识别交易或拆并股。\n\n联网请求仅发送证券或币种代码，不发送资产金额和账户名称。").setPositiveButton("知道了",null).show();
     }
+    private void backupChanged(){
+        if(app.backup.busy()){
+            if(backupProgress==null){backupProgress=new ProgressDialog(this);backupProgress.setMessage("正在处理备份…");backupProgress.setCancelable(false);backupProgress.show();}
+            return;
+        }
+        if(backupProgress!=null){backupProgress.dismiss();backupProgress=null;}
+        if(backupDeferredRender)render();
+        BackupWork.Result result=app.backup.peek();if(result==null)return;
+        if(!"confirm".equals(result.kind))app.backup.take();
+        if("choose".equals(result.kind)){
+            choosingBackup=true;
+            Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/octet-stream").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Gather-"+new SimpleDateFormat("yyyyMMdd-HHmm",Locale.ROOT).format(new Date())+".guilong");
+            try{startActivityForResult(intent,100);}catch(Exception e){choosingBackup=false;app.backup.pendingFile().delete();message("无法打开保存位置");}
+        }else if("saved".equals(result.kind))message("加密备份已保存");
+        else if("error".equals(result.kind))message(result.value);
+        else if("restored".equals(result.kind)){app.loadError=null;detailId=null;dailyPage=false;sankeyPage=false;dailyOffset=0;render();app.refresh(null);message("备份已恢复");}
+        else if("confirm".equals(result.kind)){
+            String json=result.value;
+            if(backupConfirmation!=null)return;
+            backupConfirmation=new HandDialogBuilder().setTitle("恢复这份备份？").setMessage("备份包含 "+result.accounts+" 个账户、"+result.holdings+" 笔持仓。\n\n恢复将替换当前账本。建议先导出当前账本的备份。").setNegativeButton("取消",(d,w)->{backupConfirmation=null;app.backup.take();}).setPositiveButton("替换并恢复",(d,w)->{backupConfirmation=null;app.backup.take();app.invalidateQuotes();app.backup.restore(store,json);}).setCancelable(false).show();
+        }
+    }
     private void exportBackup(){
         if(previewGuard())return;
         if(store==null||app.loadError!=null){message("当前数据未能读取，无法导出。");return;}
+        if(app.backup.busy()||choosingBackup){message("备份操作正在进行");return;}
         LinearLayout f=form();EditText pwd=input(f,"设置备份密码","","至少 8 位，请妥善保管",false);pwd.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         note(f,"文件使用 AES-GCM 加密。忘记密码无法恢复，请保存到你自己的位置。");
-        showForm("导出加密备份",f,"选择保存位置",()->{
-            char[] password=pwd.getText().toString().toCharArray();
-            try{pendingBackup=BackupCodec.encrypt(store.exportJson(),password);}catch(Exception e){throw new IllegalArgumentException(e.getMessage()==null?"备份加密失败":e.getMessage());}finally{Arrays.fill(password,'\0');pwd.setText("");}
-            Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/octet-stream").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Gather-"+new SimpleDateFormat("yyyyMMdd-HHmm",Locale.ROOT).format(new Date())+".guilong");startActivityForResult(intent,100);
-        });
+        showForm("导出加密备份",f,"选择保存位置",()->{char[] password=pwd.getText().toString().toCharArray();if(password.length<8){Arrays.fill(password,'\0');throw new IllegalArgumentException("备份密码至少 8 位");}pwd.setText("");app.backup.encrypt(store,password);});
     }
-    private void chooseImport(){if(previewGuard())return;startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),101);}
+    private void chooseImport(){if(previewGuard())return;if(app.backup.busy()||choosingBackup){message("备份操作正在进行");return;}startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),101);}
     @Override protected void onActivityResult(int request,int result,Intent data){
-        super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null){pendingBackup=null;return;}
-        if(request==100){try{if(pendingBackup==null)throw new IOException("请重新导出备份");try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"wt")){out.write(pendingBackup.getBytes(StandardCharsets.UTF_8));}message("加密备份已保存");}catch(Exception e){message("保存失败，请重新导出");}finally{pendingBackup=null;}}
-        if(request==101){try{ByteArrayOutputStream out=new ByteArrayOutputStream();try(InputStream in=getContentResolver().openInputStream(data.getData())){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){out.write(b,0,n);if(out.size()>6*1024*1024)throw new IOException("备份文件过大");}}importPassword(new String(out.toByteArray(),StandardCharsets.UTF_8));}catch(Exception e){message("无法读取该备份，请重新选择Gather备份文件");}}
+        super.onActivityResult(request,result,data);
+        if(request==100){choosingBackup=false;if(result!=RESULT_OK||data==null||data.getData()==null){app.backup.pendingFile().delete();return;}if(!app.backup.pendingFile().isFile()){message("备份已失效，请重新导出");return;}app.backup.save(data.getData());}
+        if(request==101&&result==RESULT_OK&&data!=null&&data.getData()!=null)importPassword(data.getData());
     }
-    private void importPassword(String encrypted){
+    private void importPassword(android.net.Uri uri){
         LinearLayout f=form();EditText pwd=input(f,"备份密码","","输入导出时设置的密码",false);pwd.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        showForm("解密备份",f,"检查备份",()->{
-            final String json;char[] password=pwd.getText().toString().toCharArray();
-            try{json=BackupCodec.decrypt(encrypted,password);}catch(Exception e){throw new IllegalArgumentException("密码不正确或文件已损坏，原数据未修改");}finally{Arrays.fill(password,'\0');pwd.setText("");}
-            final int accounts,holdings;
-            try{JSONObject parsed=new JSONObject(json);accounts=parsed.getJSONArray("accounts").length();holdings=parsed.getJSONArray("holdings").length();}catch(Exception e){throw new IllegalArgumentException("备份数据格式不正确");}
-            handler.post(()->new HandDialogBuilder().setTitle("恢复这份备份？").setMessage("备份包含 "+accounts+" 个账户、"+holdings+" 笔持仓。\n\n恢复将替换当前账本。建议先导出当前账本的备份。").setNegativeButton("取消",null).setPositiveButton("替换并恢复",(d,w)->safe(()->{store.importJson(json);app.loadError=null;detailId=null;dailyPage=false;sankeyPage=false;dailyOffset=0;render();app.refresh(null);})).show());
-        });
+        showForm("解密备份",f,"检查备份",()->{char[] password=pwd.getText().toString().toCharArray();pwd.setText("");app.backup.decrypt(uri,password);});
     }
     private void quoteLine(){
         String timestamp="";int missing=0;for(WealthStore.Holding h:store.holdings){if(!quoted(h)){missing++;continue;}if(timestamp.isEmpty()||h.quoteTime.compareTo(timestamp)<0)timestamp=h.quoteTime;}

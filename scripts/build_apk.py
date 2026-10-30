@@ -122,9 +122,9 @@ def main():
         "--target-sdk-version",
         "35",
         "--version-code",
-        "8",
+        "9",
         "--version-name",
-        "0.7.0",
+        "0.7.1",
         "-F",
         unsigned,
     )
@@ -216,13 +216,13 @@ def main():
     )
     run(java, "-jar", android / "lib/apksigner.jar", "verify", "--verbose", candidate)
     variant = "release" if options.release else "debug"
-    output = ROOT / f"app/build/outputs/apk/{variant}/Gather-0.7.0-{variant}.apk"
+    output = ROOT / f"app/build/outputs/apk/{variant}/Gather-0.7.1-{variant}.apk"
     output.parent.mkdir(parents=True, exist_ok=True)
     os.replace(candidate, output)
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
     report = {
         "applicationId": PACKAGE,
-        "versionName": "0.7.0",
+        "versionName": "0.7.1",
         "minSdk": 26,
         "targetSdk": 35,
         "compileSdk": 35,

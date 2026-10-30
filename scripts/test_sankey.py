@@ -8,7 +8,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = Path(os.environ.get("ANDROID_TOOLS_HOME", str(ROOT / ".local/toolchain")))
-JAVA = TOOLS / "jdk-17.0.20.1+1-jre/Contents/Home/bin/java"
+JAVA_HOME = Path(
+    os.environ.get(
+        "GUILONG_JAVA_HOME", str(TOOLS / "jdk-17.0.20.1+1-jre/Contents/Home")
+    )
+)
+JAVA = JAVA_HOME / "bin/java"
 with tempfile.TemporaryDirectory(prefix="guilong-sankey-") as tmp:
     sources = [
         ROOT / "app/src/main/java/com/qianwang/privatewealth" / name

@@ -10,7 +10,7 @@
 ./gradlew :app:assembleDebug
 ```
 
-Wrapper 固定为 Gradle 8.11.1，AGP 8.9.2。首次构建需要下载依赖。标准 Gradle 路径尚未在维护者本机验证。Gradle 的 release 默认未配置签名；不要将 unsigned APK 当作可安装发布包。
+Wrapper 固定为 Gradle 8.11.1，AGP 8.9.2。首次构建需要下载依赖。已使用隔离的 JDK 17 与 Android SDK 35 验证 debug 构建及领域检查。Gradle 的 release 默认未配置签名；不要将 unsigned APK 当作可安装发布包。
 
 ## 本地离线构建器
 
@@ -33,13 +33,21 @@ export GUILONG_JAVA_HOME="$ANDROID_TOOLS_HOME/jdk-17.0.21+9-jre/Contents/Home"
 ./scripts/build.sh --release
 ```
 
-发行输出：`app/build/outputs/apk/release/Gather-0.7.0-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
+发行输出：`app/build/outputs/apk/release/Gather-0.7.1-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
 
 不传 `--release` 则生成 debug 变体，便于 `run-as` 设备测试。离线工具不下载或修改全局 SDK/JDK。
 
 ## 领域检查
 
-配置上述工具后：
+标准 Gradle 入口（JDK 17 和 Android SDK 35）：
+
+```bash
+./gradlew :app:domainCheck
+```
+
+该入口使用合成数据，在 JVM 执行领域、桑基图及行情／备份检查，不覆盖 Android 实际存储。GitHub Actions 对推送和 PR 运行此检查及 debug 构建。
+
+离线工具链也可运行：
 
 ```bash
 python3 scripts/test_assets_v6.py
@@ -48,7 +56,17 @@ python3 scripts/test_sankey.py
 ./scripts/test-quotes.sh
 ```
 
-Sankey 测试当前使用工具目录下默认 JRE 路径；可在该位置配置兼容的 JRE。测试使用合成数据，默认仅在 JVM 运行；两个 Python 领域脚本支持显式 `--serial` 在独立 Android 临时目录检查真实存储，不触碰应用账本。`scripts/test-quotes.sh --live` 会额外请求真实外部行情。
+所有测试均支持通过 `GUILONG_JAVA_HOME` 指定 JRE。测试使用合成数据，默认仅在 JVM 运行；两个 Python 领域脚本支持显式 `--serial` 在独立 Android 临时目录检查真实存储，不触碰应用账本。`scripts/test-quotes.sh --live` 会额外请求真实外部行情。
+
+## Android 备份与生命周期回归
+
+配置离线工具及已启动的专用模拟器后：
+
+```bash
+python3 scripts/test_backup_android.py --serial emulator-5580
+```
+
+可通过 `--adb` / `--adb-port` 指定 ADB。该入口只接受模拟器序列号，构建并安装独立的 `com.qianwang.privatewealth.backupqa` 包，使用合成账本检查异步加密、文件导出、错误密码、恢复确认、失败恢复、单任务限制，以及备份期间页面重建／延迟绘制。结束后卸载测试包，不写入正式应用账本。此回归需要 Android，当前 GitHub CI 只执行 debug 构建和 JVM 领域检查。
 
 ## 专用模拟器
 

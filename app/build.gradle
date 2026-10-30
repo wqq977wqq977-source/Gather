@@ -10,8 +10,8 @@ android {
         applicationId 'com.qianwang.privatewealth'
         minSdk 26
         targetSdk 35
-        versionCode 8
-        versionName '0.7.0'
+        versionCode 9
+        versionName '0.7.1'
     }
 
     compileOptions {
@@ -44,4 +44,42 @@ android {
             minifyEnabled false
         }
     }
+}
+
+// Standalone JVM checks use synthetic data and do not touch an Android ledger.
+def domainClasses = layout.buildDirectory.dir('domain-check/classes')
+def domainSources = [
+    'WealthStore.java', 'AssetSankey.java', 'AssetTree.java',
+    'DisplayMoney.java', 'QuoteClient.java', 'BackupCodec.java'
+].collect { file("src/main/java/com/qianwang/privatewealth/${it}") }
+def domainTests = [
+    rootProject.file('scripts/WealthDomainTests.java'),
+    rootProject.file('tests/AssetsV6Test.java'),
+    rootProject.file('tests/AssetSankeyTest.java'),
+    rootProject.file('tests/QuoteBackupTest.java')
+]
+tasks.register('compileDomainChecks', JavaCompile) {
+    source(domainSources + domainTests)
+    classpath = files(provider { android.bootClasspath })
+    destinationDirectory = domainClasses
+    options.encoding = 'UTF-8'
+    sourceCompatibility = '8'
+    targetCompatibility = '8'
+}
+[
+    'wealthDomainCheck': 'com.qianwang.privatewealth.WealthDomainTests',
+    'assetsV6Check': 'com.qianwang.privatewealth.AssetsV6Test',
+    'sankeyCheck': 'com.qianwang.privatewealth.AssetSankeyTest',
+    'quoteBackupCheck': 'QuoteBackupTest'
+].each { taskName, entryPoint ->
+    tasks.register(taskName, JavaExec) {
+        dependsOn 'compileDomainChecks'
+        classpath = files(domainClasses, provider { android.bootClasspath })
+        mainClass = entryPoint
+    }
+}
+tasks.register('domainCheck') {
+    group = 'verification'
+    description = 'Run synthetic JVM domain, Sankey, quote and backup checks.'
+    dependsOn 'wealthDomainCheck', 'assetsV6Check', 'sankeyCheck', 'quoteBackupCheck'
 }
