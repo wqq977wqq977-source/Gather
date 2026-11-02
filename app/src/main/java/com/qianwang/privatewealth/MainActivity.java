@@ -455,6 +455,7 @@ public class MainActivity extends Activity {
     private void settingsHome(){
         settingsGroup("显示与外观");
         settingsRow("star","界面风格",sketch.blue?"蓝墨手帐":"彩铅手帐",this::appearance);
+        settingsRow("hold","涨跌配色",redGains()?"红涨绿跌":"绿涨红跌",this::changeColorSettings);
         settingsRow("globe","显示币种",money.usd?"美元 USD · 汇率 "+getSharedPreferences("appearance",0).getString("fxDate",""):"人民币 CNY",this::currencySettings);
         settingsRow("overview","底部导航","调整顺序与图标",()->{navigationSettingsPage=true;render();});
         settingsGroup("数据与备份");
@@ -510,6 +511,12 @@ public class MainActivity extends Activity {
             form.addView(gridRow);
         }
         showForm("更换"+NavigationLayout.label(page)+"图标",form,"保存图标",()->getSharedPreferences("appearance",0).edit().putString("navIcon_"+page,selected[0]).apply());
+    }
+    private boolean redGains(){return getSharedPreferences("appearance",0).getBoolean("redGains",false);}
+    private void changeColorSettings(){
+        new HandDialogBuilder().setTitle("涨跌配色").setSingleChoiceItems(new String[]{"绿涨红跌","红涨绿跌"},redGains()?1:0,(dialog,index)->{
+            getSharedPreferences("appearance",0).edit().putBoolean("redGains",index==1).apply();dialog.dismiss();render();
+        }).setNegativeButton("取消",null).show();
     }
     private void currencySettings(){
         new HandDialogBuilder().setTitle("显示币种").setSingleChoiceItems(new String[]{"人民币 CNY","美元 USD"},money.usd?1:0,(dialog,index)->{
@@ -652,7 +659,7 @@ public class MainActivity extends Activity {
     private String signed(long fen){return hidden?"••••":money.signed(fen);}
     private String price(long micros){return hidden?"••••":money.price(micros);}
     private String decimal(long fen){return new java.math.BigDecimal(fen).movePointLeft(2).toPlainString();}
-    private int changeColor(long value){return value>0?positive:value<0?red:muted;}
+    private int changeColor(long value){return value>0?(redGains()?red:positive):value<0?(redGains()?positive:red):muted;}
     private String kindName(String kind){return "securities".equals(kind)?"证券账户":"crypto".equals(kind)?"数字资产账户":"bank".equals(kind)?"银行存款":"其他资金";}
     private String date(long timestamp){return new SimpleDateFormat("MM.dd",Locale.CHINA).format(new Date(timestamp));}
     private String dateTime(long timestamp){return new SimpleDateFormat("MM-dd HH:mm",Locale.CHINA).format(new Date(timestamp));}

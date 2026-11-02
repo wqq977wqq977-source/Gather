@@ -49,14 +49,25 @@ public final class RefinementInstrumentation extends Instrumentation {
         android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
         java.util.List<android.view.accessibility.AccessibilityNodeInfo> found=root.findAccessibilityNodeInfosByText(text);
         check(!found.isEmpty(),"dialog control exists: "+text);
-        android.view.accessibility.AccessibilityNodeInfo node=found.get(0);
+        android.view.accessibility.AccessibilityNodeInfo node=found.get(found.size()-1);
+        for(android.view.accessibility.AccessibilityNodeInfo candidate:found)if(text.contentEquals(candidate.getText()==null?"":candidate.getText())&&candidate.isClickable()){node=candidate;break;}
         while(node!=null&&!node.isClickable())node=node.getParent();
         check(node!=null&&node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK),"dialog clicked: "+text);waitForIdleSync();SystemClock.sleep(200);
     }
     private void variant() throws Exception {
         check(getTargetContext().getPackageName().endsWith(".refinementqa"),"isolated package required");
         activity=(MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));waitForIdleSync();
-        click("设置与备份");capture("settings-"+mode);click("底部导航");capture("navigation-"+mode);
+        ui(()->{invoke("createPreview");set("tab",1);invoke("render");});
+        int green=(Integer)get("positive"),red=(Integer)get("red");
+        check(((TextView)findPrefix("较昨收 +")).getCurrentTextColor()==green,"default green gains");
+        ui(()->{activity.getSharedPreferences("appearance",0).edit().putBoolean("redGains",true).apply();invoke("render");});
+        check(activity.getSharedPreferences("appearance",0).getBoolean("redGains",false),"choice persisted");
+        check(((TextView)findPrefix("较昨收 +")).getCurrentTextColor()==red,"holding gains turn red");capture("red-gains");
+        ui(()->activity.finish());activity=(MainActivity)startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));waitForIdleSync();
+        check(activity.getSharedPreferences("appearance",0).getBoolean("redGains",false),"choice survives restart");
+        ui(()->activity.getSharedPreferences("appearance",0).edit().putBoolean("redGains",false).apply());check(!activity.getSharedPreferences("appearance",0).getBoolean("redGains",true),"green preference restored");
+        ui(()->{set("settingsPage",false);invoke("createPreview");set("tab",1);invoke("render");});check(((TextView)findPrefix("较昨收 +")).getCurrentTextColor()==green,"holding gains turn green");
+
     }
     private void ui(Runnable action){runOnMainSync(action);waitForIdleSync();SystemClock.sleep(150);}
     private Object get(String name){try{Field f=MainActivity.class.getDeclaredField(name);f.setAccessible(true);return f.get(activity);}catch(Exception e){throw new RuntimeException(e);}}

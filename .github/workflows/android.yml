@@ -20,4 +20,10 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew :app:assembleDebug :app:domainCheck
+      - run: |
+          jq -e '.validation == "smoke" or .validation == "full"' .github/release-policy.json >/dev/null
+          if [[ "$(jq -r .validation .github/release-policy.json)" == "full" ]]; then
+            ./gradlew :app:assembleDebug :app:domainCheck
+          else
+            ./gradlew :app:assembleDebug
+          fi

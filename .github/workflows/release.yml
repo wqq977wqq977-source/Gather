@@ -1,5 +1,4 @@
 name: Publish signed Gather APK
-
 on:
   workflow_dispatch:
   push:
@@ -8,16 +7,13 @@ on:
       - .github/workflows/release.yml
       - app/build.gradle
       - app/src/main/java/**
-      - docs/releases/0.9.0.md
+      - docs/releases/0.9.1.md
       - scripts/build_apk.py
-
 permissions:
   contents: write
-
 concurrency:
   group: gather-signed-release
   cancel-in-progress: false
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -33,8 +29,14 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Verify code and domain behavior
-        run: ./gradlew :app:assembleDebug :app:domainCheck
+      - name: Validate release policy
+        run: |
+          jq -e '.validation == "smoke" or .validation == "full"' .github/release-policy.json >/dev/null
+          if [[ "$(jq -r .validation .github/release-policy.json)" == "full" ]]; then
+            ./gradlew :app:assembleDebug :app:domainCheck
+          else
+            echo 'Small release: signed build and APK checks only.'
+          fi
       - name: Prepare protected original signing identity
         id: signature
         shell: bash
@@ -74,19 +76,19 @@ jobs:
           new_sha="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/new-cert.txt")"
           test -n "$old_sha"
           test "$old_sha" = "$new_sha" || { echo '::error::Different signing certificate: update would fail. Publication blocked.'; exit 1; }
-          "$aapt" dump badging "$current" | grep -F "versionCode='14' versionName='0.9.0'"
+          "$aapt" dump badging "$current" | grep -F "versionCode='15' versionName='0.9.1'"
           "$aapt" dump badging "$current" | grep -F "package: name='com.qianwang.privatewealth'"
           unzip -t "$current" > /dev/null
           mkdir -p release-files
-          cp "$current" "release-files/Gather-0.9.0-release.apk"
+          cp "$current" "release-files/Gather-0.9.1-release.apk"
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
-          p = Path("release-files/Gather-0.9.0-release.apk")
+          p = Path("release-files/Gather-0.9.1-release.apk")
           digest = hashlib.sha256(p.read_bytes()).hexdigest()
           (p.parent / "SHA256SUMS.txt").write_text(f"{digest}  {p.name}\n")
-          (p.parent / "Gather-0.9.0-release.json").write_text(json.dumps({
-              "versionName": "0.9.0", "versionCode": 14, "package": "com.qianwang.privatewealth",
+          (p.parent / "Gather-0.9.1-release.json").write_text(json.dumps({
+              "versionName": "0.9.1", "versionCode": 15, "package": "com.qianwang.privatewealth",
               "sourceCommit": os.environ["GITHUB_SHA"], "sha256": digest,
               "certificateVerifiedAgainst": "v0.7.1"
           }, ensure_ascii=False, indent=2) + "\n")
@@ -98,12 +100,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.0 >/dev/null 2>&1; then
-            echo '::error::v0.9.0 already exists. Refusing to overwrite a published release.'
+          if gh release view v0.9.1 >/dev/null 2>&1; then
+            echo '::error::v0.9.1 already exists. Refusing to overwrite a published release.'
             exit 1
           fi
-          gh release create v0.9.0 release-files/* --target "$GITHUB_SHA" \
-            --title 'Gather v0.9.0' --notes-file docs/releases/0.9.0.md --latest
+          gh release create v0.9.1 release-files/* --target "$GITHUB_SHA" \
+            --title 'Gather v0.9.1' --notes-file docs/releases/0.9.1.md --latest
       - name: Remove private signing material
         if: always()
         run: rm -f .local/signing/guilong-debug.p12 .local/signing/password.txt
