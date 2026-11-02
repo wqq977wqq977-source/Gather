@@ -384,7 +384,7 @@ public class MainActivity extends Activity {
     }
     private void settings(){
         String[] options={"变更记录","导出加密备份","从备份恢复","行情与计算说明","关于Gather","预览示例","界面风格","显示币种"};
-        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.7.1").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
+        new HandDialogBuilder().setTitle("设置与数据").setItems(options,(d,w)->{if(w==7)currencySettings();else if(w==6)appearance();else if(w==0)history();else if(w==1)exportBackup();else if(w==2)chooseImport();else if(w==3)quoteInfo();else if(w==5){safe(this::createPreview);tab=0;render();}else new HandDialogBuilder().setTitle("Gather  0.7.2").setMessage("只关心值得关注的资产。\n\nAndroid 原生 · 数据保存在本机\n股票 / ETF / 数字货币 · CNY / USD\n\n不会连接券商账户或执行交易。卸载会清除本地账本，请定期导出加密备份。").setPositiveButton("知道了",null).show();}).setNegativeButton("返回",null).show();
     }
     private void currencySettings(){
         LinearLayout f=form();label(f,"显示币种");Spinner currency=spinner(new String[]{"人民币 CNY","美元 USD"});currency.setSelection(money.usd?1:0);f.addView(currency);

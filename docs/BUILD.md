@@ -33,7 +33,7 @@ export GUILONG_JAVA_HOME="$ANDROID_TOOLS_HOME/jdk-17.0.21+9-jre/Contents/Home"
 ./scripts/build.sh --release
 ```
 
-发行输出：`app/build/outputs/apk/release/Gather-0.7.1-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
+发行输出：`app/build/outputs/apk/release/Gather-0.7.2-release.apk`，同目录 JSON 记录版本、字节数及 SHA-256。release APK 禁用调试，沿用 `.local/signing/` 的私有签名身份。首次构建会生成本机身份；维护者原密钥不包含在仓库，其他人构建的签名自然不同。保管好密钥和密码文件，不要提交它们。
 
 不传 `--release` 则生成 debug 变体，便于 `run-as` 设备测试。离线工具不下载或修改全局 SDK/JDK。
 
@@ -79,3 +79,14 @@ python3 scripts/test_backup_android.py --serial emulator-5580
 ```
 
 启动完成返回 `1` 后可以安装 APK。专用 AVD 名称保留 `Guilong`，设备 `emulator-5580`、ADB 端口 5041；可通过 `GUILONG_EMULATOR_PORT` / `GUILONG_ADB_PORT` 覆盖。所有可变状态在被忽略的 `.local/` 中，不会提交到 Git。
+
+## GitHub 正式签名发行（v0.7.2）
+
+正式发行需要**原版签名**，否则不能覆盖安装并保留现有账本。仓库不会保存私钥；发布工作流 `.github/workflows/release.yml` 必须配置以下 **Actions repository secrets**（不是提交代码或在 Issue 中粘贴）：
+
+- `GATHER_SIGNING_P12_BASE64`：原构建环境 `.local/signing/guilong-debug.p12` 的 Base64 文本。macOS／Linux 可在**原构建机**运行 `base64 < .local/signing/guilong-debug.p12 | tr -d '\\n'` 获取。
+- `GATHER_SIGNING_PASSWORD`：原构建环境 `.local/signing/password.txt` 的原始内容，不要上传密码文件或把密码发到聊天里。
+
+添加路径：仓库 **Settings → Secrets and variables → Actions → New repository secret**。此后在 **Actions → Publish signed Gather APK → Run workflow** 手动启动，或由主分支相关变更自动触发。缺少原密钥时工作流报错并停止，不会发布不兼容的 APK。
+
+工作流先在 JDK 17 / Android SDK 35 运行构建与领域检查，再构建 Release。正式发布前将下载已发布的 v0.7.1 APK，核对 SHA-256 和新旧 APK 的签名证书，并校验包名、版本号、APK 结构。全部通过后才生成 v0.7.2 GitHub Release，附 APK、SHA256SUMS.txt 与构建元数据。**若原密钥已丢失，不可自行生成替代签名后称其可原位升级。** 升级前请先在旧版本导出加密备份。
