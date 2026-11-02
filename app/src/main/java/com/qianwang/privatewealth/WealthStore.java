@@ -29,7 +29,7 @@ import java.util.UUID;
 
 /** Local, single-currency wealth ledger. Cash is fen; per-share prices are millionths of yuan. */
 public final class WealthStore {
-    public static final int SCHEMA_VERSION = 4;
+    public static final int SCHEMA_VERSION = 5;
     public static final long MAX_MONEY_FEN = 9_000_000_000_000_000L;
     public static final long MAX_PRICE_MICROS = 1_000_000_000_000_000L;
     public static final long MAX_QUANTITY = 1_000_000_000_000L;
@@ -97,6 +97,8 @@ public final class WealthStore {
         public long incomeFen;
         public long cashAdjustmentFen;
         public long holdingAdjustmentFen;
+        /** Quote deltas observed by this version, even when earlier sources are incomplete. */
+        public long observedMarketChangeFen;
         /** False for legacy or discontinuous observations, whose remainder must not be called market movement. */
         public boolean sourcesKnown;
         public DailySnapshot() {}
@@ -105,6 +107,7 @@ public final class WealthStore {
 
     private static final class State {
         long mutationTime;
+        long quoteChangeFen; // Transaction-local; never copied from a previous snapshot.
         final List<Account> accounts = new ArrayList<>();
         final List<Holding> holdings = new ArrayList<>();
         final List<Entry> entries = new ArrayList<>();
@@ -299,7 +302,12 @@ public final class WealthStore {
             target.quoteTime = quote.quoteTime;
             updated++;
         }
-        if (updated > 0) commit(next);
+        if (updated > 0) {
+            long marketAfter = 0;
+            for (Holding holding : next.holdings) marketAfter = add(marketAfter, holdingValue(holding));
+            next.quoteChangeFen = marketAfter - totalMarketValue();
+            commit(next);
+        }
         return updated;
     }
 
@@ -472,6 +480,7 @@ public final class WealthStore {
         // A restored ledger may not match its last observation. Never silently call that gap a quote gain.
         boolean continuous = baseline == null || (baseline.cashFen == totalCash() && baseline.marketFen == totalMarketValue());
         value.sourcesKnown = continuous && (!sameDay || previous.sourcesKnown);
+        value.observedMarketChangeFen = sourceAdd(sameDay ? previous.observedMarketChangeFen : 0, state.quoteChangeFen);
         value.incomeFen = sourceAdd(sameDay ? previous.incomeFen : 0, incomeFen);
         value.cashAdjustmentFen = sourceAdd(sameDay ? previous.cashAdjustmentFen : 0, cashAdjustmentFen);
         value.holdingAdjustmentFen = sourceAdd(sameDay ? previous.holdingAdjustmentFen : 0, holdingAdjustmentFen);
@@ -487,7 +496,7 @@ public final class WealthStore {
                     && previous.unquotedCount == value.unquotedCount && previous.oldestQuoteTime.equals(value.oldestQuoteTime)
                     && previous.incomeFen == value.incomeFen && previous.cashAdjustmentFen == value.cashAdjustmentFen
                     && previous.holdingAdjustmentFen == value.holdingAdjustmentFen && previous.sourcesKnown == value.sourcesKnown
-                    && !followingChanged) return false;
+                    && previous.observedMarketChangeFen == value.observedMarketChangeFen && !followingChanged) return false;
             state.dailySnapshots.set(index, value);
         } else {
             if (state.dailySnapshots.size() >= MAX_DAILY_SNAPSHOTS) throw invalid("每日资产记录已达上限，请先导出备份");
@@ -504,6 +513,12 @@ public final class WealthStore {
                     .subtract(BigDecimal.valueOf(current.incomeFen)).subtract(BigDecimal.valueOf(current.cashAdjustmentFen))
                     .subtract(BigDecimal.valueOf(current.holdingAdjustmentFen)).longValueExact();
         } catch (ArithmeticException error) { throw invalid("变化来源合计超出支持范围"); }
+    }
+
+    /** Only the remainder without a directly observed quote source remains unclassified. */
+    public static long unclassifiedChangeFen(DailySnapshot previous, DailySnapshot current) {
+        try { return Math.subtractExact(otherChangeFen(previous, current), current.observedMarketChangeFen); }
+        catch (ArithmeticException error) { throw invalid("变化来源合计超出支持范围"); }
     }
 
     private static long sourceAdd(long existing, long change) {
@@ -547,6 +562,7 @@ public final class WealthStore {
             copy.cashFen = old.cashFen; copy.marketFen = old.marketFen; copy.costFen = old.costFen;
             copy.unquotedCount = old.unquotedCount; copy.oldestQuoteTime = old.oldestQuoteTime;
             copy.incomeFen = old.incomeFen; copy.cashAdjustmentFen = old.cashAdjustmentFen;
+            copy.observedMarketChangeFen = old.observedMarketChangeFen;
             copy.holdingAdjustmentFen = old.holdingAdjustmentFen; copy.sourcesKnown = old.sourcesKnown;
             state.dailySnapshots.add(copy);
         }
@@ -585,6 +601,7 @@ public final class WealthStore {
                 JSONObject item = new JSONObject(); item.put("day", daily.day); item.put("recordedAt", daily.recordedAt);
                 item.put("cashFen", daily.cashFen); item.put("marketFen", daily.marketFen); item.put("costFen", daily.costFen);
                 item.put("incomeFen", daily.incomeFen); item.put("cashAdjustmentFen", daily.cashAdjustmentFen);
+                item.put("observedMarketChangeFen", daily.observedMarketChangeFen);
                 item.put("holdingAdjustmentFen", daily.holdingAdjustmentFen); item.put("sourcesKnown", daily.sourcesKnown);
                 item.put("unquotedCount", daily.unquotedCount); item.put("oldestQuoteTime", daily.oldestQuoteTime); dailyArray.put(item);
             }
@@ -631,6 +648,7 @@ public final class WealthStore {
                         daily.incomeFen = integer(item, "incomeFen"); daily.cashAdjustmentFen = integer(item, "cashAdjustmentFen");
                         daily.holdingAdjustmentFen = integer(item, "holdingAdjustmentFen"); daily.sourcesKnown = bool(item, "sourcesKnown");
                     }
+                    if (version >= 5) daily.observedMarketChangeFen = integer(item, "observedMarketChangeFen");
                     long unquotedCount = integer(item, "unquotedCount"); bounded(unquotedCount, MAX_HOLDINGS, "未报价持仓数量");
                     daily.unquotedCount = (int) unquotedCount; daily.oldestQuoteTime = string(item, "oldestQuoteTime");
                     state.dailySnapshots.add(daily);
@@ -685,6 +703,7 @@ public final class WealthStore {
             if (daily.incomeFen < 0) throw invalid("每日收入累计不能为负数");
             if (previousSnapshot != null) {
                 otherChangeFen(previousSnapshot, daily);
+                unclassifiedChangeFen(previousSnapshot, daily);
                 if (daily.sourcesKnown && BigDecimal.valueOf(daily.incomeFen).add(BigDecimal.valueOf(daily.cashAdjustmentFen))
                         .compareTo(BigDecimal.valueOf(daily.cashFen).subtract(BigDecimal.valueOf(previousSnapshot.cashFen))) != 0) {
                     throw invalid("完整变化来源与现金变动不一致");

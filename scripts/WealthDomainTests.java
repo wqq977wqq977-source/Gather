@@ -137,7 +137,7 @@ public final class WealthDomainTests {
         equal(beforeTransfer, store.dailySnapshots.get(0).totalFen(), "past observation is never recalculated");
         equal(1_437_800L, store.dailySnapshots.get(1).totalFen(), "manual cash change contributes to observed growth");
         String backup = store.exportJson();
-        equal(4L, new JSONObject(backup).getLong("version"), "new backups use schema v4");
+        equal(5L, new JSONObject(backup).getLong("version"), "new backups use schema v5");
         long validTotal = store.totalAssets();
         JSONObject malformed = new JSONObject(backup);
         malformed.getJSONArray("holdings").getJSONObject(0).put("accountId", "missing-account");

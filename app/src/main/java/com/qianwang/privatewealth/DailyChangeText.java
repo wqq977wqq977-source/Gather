@@ -20,7 +20,12 @@ public final class DailyChangeText {
         append(parts, "余额调整", current.cashAdjustmentFen, money);
         append(parts, "持仓调整", current.holdingAdjustmentFen, money);
         long other = WealthStore.otherChangeFen(previous, current);
-        append(parts, current.sourcesKnown ? "行情 / 估值" : "未分类变化", other, money);
+        if (current.sourcesKnown) {
+            append(parts, "行情 / 估值", other, money);
+        } else {
+            append(parts, "行情 / 估值", current.observedMarketChangeFen, money);
+            append(parts, "未分类变化", WealthStore.unclassifiedChangeFen(previous, current), money);
+        }
         if (!current.sourcesKnown) parts.add("部分来源未记录");
         if (parts.isEmpty()) return "无资产变化";
         return String.join(" · ", parts);

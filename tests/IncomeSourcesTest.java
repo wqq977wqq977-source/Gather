@@ -26,6 +26,7 @@ public final class IncomeSourcesTest {
             migrations(work.resolve("migrations"));
             retainedSources(work.resolve("retention"));
             largeCumulativeSources(work.resolve("large"));
+            legacyQuoteAttribution(work.resolve("legacy-quotes"));
             displayText();
             System.out.println("PASS " + checks + " income/source assertions (JVM filesystem doubles)");
         } finally {
@@ -155,7 +156,7 @@ public final class IncomeSourcesTest {
     }
 
     private static void migrations(Path folder) throws Exception {
-        for (int version : new int[]{1, 2, 3}) {
+        for (int version : new int[]{1, 2, 3, 4}) {
             Fixture f = new Fixture(folder.resolve("v" + version), "2026-11-01T04:00:00Z");
             WealthStore.Account bank = f.store.addAccount("旧账户", "bank", 1000);
             JSONObject legacy = new JSONObject(f.store.exportJson());
@@ -165,6 +166,11 @@ public final class IncomeSourcesTest {
             else {
                 JSONObject day = legacy.getJSONArray("dailySnapshots").getJSONObject(0);
                 for (String key : new String[]{"incomeFen", "cashAdjustmentFen", "holdingAdjustmentFen", "sourcesKnown"}) day.remove(key);
+            }
+            if (version == 4) {
+                JSONObject day = legacy.getJSONArray("dailySnapshots").getJSONObject(0);
+                day.put("incomeFen", 0); day.put("cashAdjustmentFen", 0); day.put("holdingAdjustmentFen", 0); day.put("sourcesKnown", false);
+                day.remove("observedMarketChangeFen");
             }
             f.store.importJson(legacy.toString());
             eq(1000, f.store.totalAssets(), "v" + version + " assets retained");
@@ -217,6 +223,57 @@ public final class IncomeSourcesTest {
         eq(0, WealthStore.otherChangeFen(f.store.dailySnapshots.get(0), f.latest()), "large offsetting sources calculate exactly");
         f.store.load();
         eq(2 * limit, f.latest().incomeFen, "large income sum survives persistence");
+    }
+
+    private static void legacyQuoteAttribution(Path folder) throws Exception {
+        Fixture f = new Fixture(folder, "2026-11-01T04:00:00Z");
+        WealthStore.Account broker = f.store.addAccount("证券", "securities", 0);
+        WealthStore.Holding holding = f.store.addHolding(broker.id, "510300", "ETF", 1000, 4_000_000);
+        f.clock.at("2026-11-02T04:00:00Z");
+        f.store.recordToday();
+        JSONObject old = new JSONObject(f.store.exportJson());
+        old.put("version", 3);
+        f.store.importJson(old.toString());
+        f.store.applyQuotes(Collections.singletonList(quote(holding.id, 3_800_000, "20261102150000")));
+        String caption = DailyChangeText.describe(f.store.dailySnapshots.get(0), f.latest(), new DisplayMoney(false, ""), false);
+        contains(caption, "行情 / 估值 -200.00", "known stock refresh on legacy day must be identified");
+        truth(!caption.contains("未分类变化 -200.00"), "known stock refresh must not be swallowed by legacy flag");
+        eq(-20_000, f.latest().observedMarketChangeFen, "quote delta stored separately");
+        f.store.applyQuotes(Collections.singletonList(quote(holding.id, 3_800_000, "20261102150000")));
+        f.store.recordToday();
+        f.store.load();
+        eq(-20_000, f.latest().observedMarketChangeFen, "duplicate quotes and reload do not double count");
+        f.store.applyQuotes(Collections.singletonList(quote(holding.id, 4_100_000, "20261102151000")));
+        eq(10_000, f.latest().observedMarketChangeFen, "later rise offsets earlier decline");
+        f.store.updateHolding(holding.id, 2000, 4_000_000);
+        eq(10_000, f.latest().observedMarketChangeFen, "manual quantity edit is not a quote change");
+        eq(0, WealthStore.unclassifiedChangeFen(f.store.dailySnapshots.get(0), f.latest()), "manual adjustment and quotes reconcile");
+        JSONObject gap = new JSONObject(f.store.exportJson());
+        gap.getJSONArray("accounts").getJSONObject(0).put("cashFen", 5000);
+        f.store.importJson(gap.toString());
+        f.store.applyQuotes(Collections.singletonList(quote(holding.id, 4_200_000, "20261102152000")));
+        eq(30_000, f.latest().observedMarketChangeFen, "known quote still isolated from imported gap");
+        eq(5000, WealthStore.unclassifiedChangeFen(f.store.dailySnapshots.get(0), f.latest()), "unexplained cash gap remains unclassified");
+        String saved = f.store.exportJson();
+        f.store.importJson(saved);
+        f.store.load();
+        eq(30_000, f.latest().observedMarketChangeFen, "backup round trips quote source");
+        JSONObject invalid = new JSONObject(saved);
+        invalid.getJSONArray("dailySnapshots").getJSONObject(1).remove("observedMarketChangeFen");
+        rejectsUnchanged(f, () -> f.store.importJson(invalid.toString()), "v5 requires observed quote source");
+        invalid.getJSONArray("dailySnapshots").getJSONObject(1).put("observedMarketChangeFen", "30000");
+        rejectsUnchanged(f, () -> f.store.importJson(invalid.toString()), "quote source must be an integer");
+        Path blocked = folder.resolve("wealth-v1.json.new");
+        Files.createDirectory(blocked);
+        try {
+            rejectsState(() -> f.store.applyQuotes(Collections.singletonList(quote(holding.id, 4_300_000, "20261102153000"))), "failed quote save surfaces");
+            eq(30_000, f.latest().observedMarketChangeFen, "failed quote save rolls back attribution");
+        } finally { Files.delete(blocked); }
+        f.clock.at("2026-11-03T04:00:00Z");
+        f.store.applyQuotes(Collections.singletonList(quote(holding.id, 4_300_000, "20261103150000")));
+        eq(20_000, f.latest().observedMarketChangeFen, "next day starts a fresh quote accumulator");
+        truth(f.latest().sourcesKnown, "legacy flag does not propagate into a continuous new day");
+
     }
 
     private static void displayText() {
