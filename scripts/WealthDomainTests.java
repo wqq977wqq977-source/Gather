@@ -137,7 +137,7 @@ public final class WealthDomainTests {
         equal(beforeTransfer, store.dailySnapshots.get(0).totalFen(), "past observation is never recalculated");
         equal(1_437_800L, store.dailySnapshots.get(1).totalFen(), "manual cash change contributes to observed growth");
         String backup = store.exportJson();
-        equal(3L, new JSONObject(backup).getLong("version"), "new backups use schema v3");
+        equal(4L, new JSONObject(backup).getLong("version"), "new backups use schema v4");
         long validTotal = store.totalAssets();
         JSONObject malformed = new JSONObject(backup);
         malformed.getJSONArray("holdings").getJSONObject(0).put("accountId", "missing-account");
@@ -186,6 +186,8 @@ public final class WealthDomainTests {
         try {
             JSONObject changed = new JSONObject(backup);
             changed.getJSONArray("dailySnapshots").getJSONObject(0).put("cashFen", 100);
+            // Changing this baseline makes the following day's attribution incomplete.
+            changed.getJSONArray("dailySnapshots").getJSONObject(1).put("sourcesKnown", false);
             String failedImport = changed.toString();
             rejectsState(() -> store.importJson(failedImport), "import write failure surfaced");
             equal(beforeTransfer, store.dailySnapshots.get(0).totalFen(), "failed import preserves snapshot memory");

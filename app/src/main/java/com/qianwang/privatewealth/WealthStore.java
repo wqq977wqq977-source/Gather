@@ -29,7 +29,7 @@ import java.util.UUID;
 
 /** Local, single-currency wealth ledger. Cash is fen; per-share prices are millionths of yuan. */
 public final class WealthStore {
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
     public static final long MAX_MONEY_FEN = 9_000_000_000_000_000L;
     public static final long MAX_PRICE_MICROS = 1_000_000_000_000_000L;
     public static final long MAX_QUANTITY = 1_000_000_000_000L;
@@ -93,11 +93,18 @@ public final class WealthStore {
         public long costFen;
         public int unquotedCount;
         public String oldestQuoteTime = "";
+        /** Net contributions for this observed day; retained independently of the recent-entry limit. */
+        public long incomeFen;
+        public long cashAdjustmentFen;
+        public long holdingAdjustmentFen;
+        /** False for legacy or discontinuous observations, whose remainder must not be called market movement. */
+        public boolean sourcesKnown;
         public DailySnapshot() {}
         public long totalFen() { return add(cashFen, marketFen); }
     }
 
     private static final class State {
+        long mutationTime;
         final List<Account> accounts = new ArrayList<>();
         final List<Holding> holdings = new ArrayList<>();
         final List<Entry> entries = new ArrayList<>();
@@ -166,10 +173,10 @@ public final class WealthStore {
         account.name = clean(name, 40, "账户名称");
         account.kind = kind;account.icon=icon;
         account.cashFen = cashFen;
-        account.updatedAt = now();
+        account.updatedAt = next.mutationTime;
         next.accounts.add(account);
         history(next, "account_created", "新增账户", account.name + " · 初始可用余额 ¥" + formatMoney(cashFen), cashFen);
-        commit(next);
+        commit(next, 0, cashFen, 0);
         return accountById(account.id);
     }
 
@@ -181,13 +188,13 @@ public final class WealthStore {
         String oldName = account.name;account.icon=icon;
         account.name = clean(name, 40, "账户名称");
         account.cashFen = cashFen;
-        account.updatedAt = now();
+        account.updatedAt = next.mutationTime;
         if (old != cashFen) {
             history(next, "balance_adjustment", "调整余额", account.name + " · ¥" + formatMoney(old) + " → ¥" + formatMoney(cashFen), subtract(cashFen, old));
         } else if (!oldName.equals(account.name)) {
             history(next, "account_updated", "修改账户名称", oldName + " → " + account.name, 0);
         }
-        commit(next);
+        commit(next, 0, subtract(cashFen, old), 0);
         return accountById(accountId);
     }
 
@@ -199,7 +206,22 @@ public final class WealthStore {
         }
         next.accounts.remove(account);
         history(next, "account_deleted", "移除账户", account.name + " · 移除余额 ¥" + formatMoney(account.cashFen), -account.cashFen);
-        commit(next);
+        commit(next, 0, -account.cashFen, 0);
+    }
+
+    /** Record external income exactly once in cash, history and the day's source totals. */
+    public synchronized void recordIncome(String accountId, long amountFen, String source, String note) {
+        if (amountFen <= 0 || amountFen > MAX_MONEY_FEN) throw invalid("收入金额必须大于零且在支持范围内");
+        String origin = clean(source, 40, "收入来源");
+        String memo = note == null ? "" : note.trim();
+        if (memo.length() > 200) throw invalid("收入备注不能超过 200 字");
+        State next = snapshot();
+        Account account = findAccount(next.accounts, accountId);
+        account.cashFen = add(account.cashFen, amountFen);
+        account.updatedAt = next.mutationTime;
+        history(next, "income", "记录收入", origin + " · " + account.name + " · +¥" + formatMoney(amountFen)
+                + (memo.isEmpty() ? "" : " · " + memo), amountFen);
+        commit(next, amountFen, 0, 0);
     }
 
     /** Records an existing position; it deliberately does not debit available cash. */
@@ -219,20 +241,21 @@ public final class WealthStore {
         holding.quantity = quantity;
         holding.costPriceMicros = costPriceMicros;
         next.holdings.add(holding);
-        account.updatedAt = now();
+        account.updatedAt = next.mutationTime;
         history(next, "holding_added", "录入持仓", account.name + " · " + holding.name + " " + holding.code + " · " + quantity + " 份/股", 0);
-        commit(next);
+        commit(next, 0, 0, holdingValue(holding));
         return holdingById(holding.id);
     }
 
     public synchronized Holding updateHolding(String holdingId, long quantity, long costPriceMicros) {
         State next = snapshot();
         Holding holding = findHolding(next.holdings, holdingId);
+        long oldValue = holdingValue(holding);
         holding.quantity = quantity;
         holding.costPriceMicros = costPriceMicros;
-        findAccount(next.accounts, holding.accountId).updatedAt = now();
+        findAccount(next.accounts, holding.accountId).updatedAt = next.mutationTime;
         history(next, "holding_adjusted", "调整持仓", holding.name + " " + holding.code + " · " + quantity + " 份/股 · 成本 ¥" + formatPrice(costPriceMicros), 0);
-        commit(next);
+        commit(next, 0, 0, subtract(holdingValue(holding), oldValue));
         return holdingById(holdingId);
     }
 
@@ -248,9 +271,9 @@ public final class WealthStore {
     public synchronized Holding addCryptoHolding(String accountId,String code,String quantity,long cost){
         State next=snapshot();Account a=findAccount(next.accounts,accountId);if(!"crypto".equals(a.kind))throw invalid("数字货币持仓请放入数字资产账户");String normalized=normalizeCryptoCode(code);
         for(Holding h:next.holdings)if(h.accountId.equals(accountId)&&h.code.equals(normalized))throw invalid("该账户已存在此币种，请修改已有持仓");
-        Holding h=new Holding();h.id=id();h.accountId=accountId;h.assetType="crypto";h.code=normalized;h.name=coinSymbol(normalized);h.quantityDecimal=parseCoinQuantity(quantity);h.costPriceMicros=cost;next.holdings.add(h);a.updatedAt=now();history(next,"holding_added","录入数字货币",a.name+" · "+h.name+" · "+h.quantityDecimal,0);commit(next);return holdingById(h.id);
+        Holding h=new Holding();h.id=id();h.accountId=accountId;h.assetType="crypto";h.code=normalized;h.name=coinSymbol(normalized);h.quantityDecimal=parseCoinQuantity(quantity);h.costPriceMicros=cost;next.holdings.add(h);a.updatedAt=next.mutationTime;history(next,"holding_added","录入数字货币",a.name+" · "+h.name+" · "+h.quantityDecimal,0);commit(next,0,0,holdingValue(h));return holdingById(h.id);
     }
-    public synchronized Holding updateCryptoHolding(String holdingId,String quantity,long cost){State next=snapshot();Holding h=findHolding(next.holdings,holdingId);if(!isCrypto(h))throw invalid("不是数字货币持仓");h.quantityDecimal=parseCoinQuantity(quantity);h.costPriceMicros=cost;findAccount(next.accounts,h.accountId).updatedAt=now();history(next,"holding_adjusted","调整数字货币",h.name+" · "+h.quantityDecimal,0);commit(next);return holdingById(h.id);}
+    public synchronized Holding updateCryptoHolding(String holdingId,String quantity,long cost){State next=snapshot();Holding h=findHolding(next.holdings,holdingId);if(!isCrypto(h))throw invalid("不是数字货币持仓");long oldValue=holdingValue(h);h.quantityDecimal=parseCoinQuantity(quantity);h.costPriceMicros=cost;findAccount(next.accounts,h.accountId).updatedAt=next.mutationTime;history(next,"holding_adjusted","调整数字货币",h.name+" · "+h.quantityDecimal,0);commit(next,0,0,subtract(holdingValue(h),oldValue));return holdingById(h.id);}
     public static long holdingPositionValue(long micros,Holding h){
         if(!isCrypto(h))return positionValue(micros,h.quantity);
         bounded(micros,MAX_PRICE_MICROS,"单价");BigDecimal q=new BigDecimal(parseCoinQuantity(h.quantityDecimal));
@@ -284,9 +307,9 @@ public final class WealthStore {
         State next = snapshot();
         Holding holding = findHolding(next.holdings, holdingId);
         next.holdings.remove(holding);
-        findAccount(next.accounts, holding.accountId).updatedAt = now();
+        findAccount(next.accounts, holding.accountId).updatedAt = next.mutationTime;
         history(next, "holding_deleted", "移除持仓", holding.name + " " + holding.code + " · 可用余额未变更", 0);
-        commit(next);
+        commit(next, 0, 0, -holdingValue(holding));
     }
 
     public synchronized void transfer(String fromId, String toId, long amountFen, String note) {
@@ -298,7 +321,7 @@ public final class WealthStore {
         if (from.cashFen < amountFen) throw invalid("转出账户可用余额不足");
         from.cashFen = subtract(from.cashFen, amountFen);
         to.cashFen = add(to.cashFen, amountFen);
-        from.updatedAt = to.updatedAt = now();
+        from.updatedAt = to.updatedAt = next.mutationTime;
         String memo = note == null ? "" : note.trim();
         if (memo.length() > 200) throw invalid("转账备注不能超过 200 字");
         history(next, "transfer", "账户转账", from.name + " → " + to.name + (memo.isEmpty() ? "" : " · " + memo), amountFen);
@@ -399,30 +422,39 @@ public final class WealthStore {
     public synchronized void loadDemo() {
         if (!accounts.isEmpty() || !holdings.isEmpty()) throw invalid("仅能在空账本中载入示例");
         State next = new State();
+        next.mutationTime = clock.millis();
         Account bank = new Account();
-        bank.id = id(); bank.name = "示例 · 大额存款"; bank.kind = "bank"; bank.cashFen = 35_000_000; bank.updatedAt = now();
+        bank.id = id(); bank.name = "示例 · 大额存款"; bank.kind = "bank"; bank.cashFen = 35_000_000; bank.updatedAt = next.mutationTime;
         Account broker = new Account();
-        broker.id = id(); broker.name = "示例 · 股票账户"; broker.kind = "securities"; broker.cashFen = 8_000_000; broker.updatedAt = now();
+        broker.id = id(); broker.name = "示例 · 股票账户"; broker.kind = "securities"; broker.cashFen = 8_000_000; broker.updatedAt = next.mutationTime;
         next.accounts.add(bank); next.accounts.add(broker);
         Holding fund = new Holding();
         fund.id = id(); fund.accountId = broker.id; fund.code = "sh510300"; fund.name = "沪深300ETF（示例）";
         fund.quantity = 10_000; fund.costPriceMicros = 4_000_000;
         next.holdings.add(fund);
         history(next, "demo", "载入示例", "示例金额，持仓以录入成本估值；请按自己的实际情况修改。", 0);
-        commit(next);
+        commit(next, 0, add(bank.cashFen, broker.cashFen), holdingValue(fund));
     }
 
     private void commit(State next) {
+        commit(next, 0, 0, 0);
+    }
+
+    private void commit(State next, long incomeFen, long cashAdjustmentFen, long holdingAdjustmentFen) {
         requireWritable();
-        upsertToday(next);
+        upsertToday(next, incomeFen, cashAdjustmentFen, holdingAdjustmentFen);
         persist(next);
         apply(next);
     }
 
     private boolean upsertToday(State state) {
+        return upsertToday(state, 0, 0, 0);
+    }
+
+    private boolean upsertToday(State state, long incomeFen, long cashAdjustmentFen, long holdingAdjustmentFen) {
         if (state.accounts.isEmpty() && state.holdings.isEmpty() && state.dailySnapshots.isEmpty()) return false;
         DailySnapshot value = new DailySnapshot();
-        value.recordedAt = clock.millis();
+        value.recordedAt = state.mutationTime;
         value.day = dayAt(value.recordedAt);
         for (Account account : state.accounts) value.cashFen = add(value.cashFen, account.cashFen);
         for (Holding holding : state.holdings) {
@@ -434,16 +466,49 @@ public final class WealthStore {
         value.totalFen();
         int index = 0;
         while (index < state.dailySnapshots.size() && state.dailySnapshots.get(index).day.compareTo(value.day) < 0) index++;
-        if (index < state.dailySnapshots.size() && state.dailySnapshots.get(index).day.equals(value.day)) {
-            DailySnapshot previous = state.dailySnapshots.get(index);
+        boolean sameDay = index < state.dailySnapshots.size() && state.dailySnapshots.get(index).day.equals(value.day);
+        DailySnapshot previous = sameDay ? state.dailySnapshots.get(index) : null;
+        DailySnapshot baseline = sameDay ? previous : index > 0 ? state.dailySnapshots.get(index - 1) : null;
+        // A restored ledger may not match its last observation. Never silently call that gap a quote gain.
+        boolean continuous = baseline == null || (baseline.cashFen == totalCash() && baseline.marketFen == totalMarketValue());
+        value.sourcesKnown = continuous && (!sameDay || previous.sourcesKnown);
+        value.incomeFen = sourceAdd(sameDay ? previous.incomeFen : 0, incomeFen);
+        value.cashAdjustmentFen = sourceAdd(sameDay ? previous.cashAdjustmentFen : 0, cashAdjustmentFen);
+        value.holdingAdjustmentFen = sourceAdd(sameDay ? previous.holdingAdjustmentFen : 0, holdingAdjustmentFen);
+        // Clock corrections can insert/update an earlier day. The following comparison then has an unknown baseline.
+        int following = sameDay ? index + 1 : index;
+        boolean followingChanged = following < state.dailySnapshots.size() && state.dailySnapshots.get(following).sourcesKnown;
+        if (following < state.dailySnapshots.size()) {
+            value.sourcesKnown = false;
+            state.dailySnapshots.get(following).sourcesKnown = false;
+        }
+        if (sameDay) {
             if (previous.cashFen == value.cashFen && previous.marketFen == value.marketFen && previous.costFen == value.costFen
-                    && previous.unquotedCount == value.unquotedCount && previous.oldestQuoteTime.equals(value.oldestQuoteTime)) return false;
+                    && previous.unquotedCount == value.unquotedCount && previous.oldestQuoteTime.equals(value.oldestQuoteTime)
+                    && previous.incomeFen == value.incomeFen && previous.cashAdjustmentFen == value.cashAdjustmentFen
+                    && previous.holdingAdjustmentFen == value.holdingAdjustmentFen && previous.sourcesKnown == value.sourcesKnown
+                    && !followingChanged) return false;
             state.dailySnapshots.set(index, value);
         } else {
             if (state.dailySnapshots.size() >= MAX_DAILY_SNAPSHOTS) throw invalid("每日资产记录已达上限，请先导出备份");
             state.dailySnapshots.add(index, value);
         }
         return true;
+    }
+
+    /** Remainder of the observed change; only complete source records may label this market/valuation movement. */
+    public static long otherChangeFen(DailySnapshot previous, DailySnapshot current) {
+        if (previous == null || current == null) throw invalid("需要两条资产记录才能计算变化");
+        try {
+            return BigDecimal.valueOf(current.totalFen()).subtract(BigDecimal.valueOf(previous.totalFen()))
+                    .subtract(BigDecimal.valueOf(current.incomeFen)).subtract(BigDecimal.valueOf(current.cashAdjustmentFen))
+                    .subtract(BigDecimal.valueOf(current.holdingAdjustmentFen)).longValueExact();
+        } catch (ArithmeticException error) { throw invalid("变化来源合计超出支持范围"); }
+    }
+
+    private static long sourceAdd(long existing, long change) {
+        try { return Math.addExact(existing, change); }
+        catch (ArithmeticException error) { throw invalid("当日变化来源累计超出支持范围"); }
     }
     private void requireWritable() {
         if (loadFailed) throw new IllegalStateException("本地数据读取失败，已停止写入以保护原文件；请先导入有效备份。");
@@ -463,6 +528,7 @@ public final class WealthStore {
     }
     private State snapshot() {
         State state = new State();
+        state.mutationTime = clock.millis();
         for (Account old : accounts) {
             Account copy = new Account(); copy.id = old.id; copy.name = old.name; copy.kind = old.kind; copy.icon=old.icon; copy.cashFen = old.cashFen; copy.updatedAt = old.updatedAt;
             state.accounts.add(copy);
@@ -480,6 +546,8 @@ public final class WealthStore {
             DailySnapshot copy = new DailySnapshot(); copy.day = old.day; copy.recordedAt = old.recordedAt;
             copy.cashFen = old.cashFen; copy.marketFen = old.marketFen; copy.costFen = old.costFen;
             copy.unquotedCount = old.unquotedCount; copy.oldestQuoteTime = old.oldestQuoteTime;
+            copy.incomeFen = old.incomeFen; copy.cashAdjustmentFen = old.cashAdjustmentFen;
+            copy.holdingAdjustmentFen = old.holdingAdjustmentFen; copy.sourcesKnown = old.sourcesKnown;
             state.dailySnapshots.add(copy);
         }
         return state;
@@ -516,6 +584,8 @@ public final class WealthStore {
             for (DailySnapshot daily : state.dailySnapshots) {
                 JSONObject item = new JSONObject(); item.put("day", daily.day); item.put("recordedAt", daily.recordedAt);
                 item.put("cashFen", daily.cashFen); item.put("marketFen", daily.marketFen); item.put("costFen", daily.costFen);
+                item.put("incomeFen", daily.incomeFen); item.put("cashAdjustmentFen", daily.cashAdjustmentFen);
+                item.put("holdingAdjustmentFen", daily.holdingAdjustmentFen); item.put("sourcesKnown", daily.sourcesKnown);
                 item.put("unquotedCount", daily.unquotedCount); item.put("oldestQuoteTime", daily.oldestQuoteTime); dailyArray.put(item);
             }
             root.put("accounts", accountArray); root.put("holdings", holdingArray); root.put("entries", entryArray);
@@ -528,7 +598,7 @@ public final class WealthStore {
         try {
             JSONObject root = new JSONObject(json);
             long version = integer(root, "version");
-            if (!"qianwang-private-wealth".equals(string(root, "format")) || (version != 1 && version != 2 && version != SCHEMA_VERSION) || !"CNY".equals(string(root, "currency"))) throw invalid("不支持此备份格式、版本或币种");
+            if (!"qianwang-private-wealth".equals(string(root, "format")) || version < 1 || version > SCHEMA_VERSION || !"CNY".equals(string(root, "currency"))) throw invalid("不支持此备份格式、版本或币种");
             State state = new State();
             JSONArray accountArray = root.getJSONArray("accounts");
             JSONArray holdingArray = root.getJSONArray("holdings");
@@ -557,6 +627,10 @@ public final class WealthStore {
                     JSONObject item = dailyArray.getJSONObject(i); DailySnapshot daily = new DailySnapshot();
                     daily.day = string(item, "day"); daily.recordedAt = integer(item, "recordedAt");
                     daily.cashFen = integer(item, "cashFen"); daily.marketFen = integer(item, "marketFen"); daily.costFen = integer(item, "costFen");
+                    if (version >= 4) {
+                        daily.incomeFen = integer(item, "incomeFen"); daily.cashAdjustmentFen = integer(item, "cashAdjustmentFen");
+                        daily.holdingAdjustmentFen = integer(item, "holdingAdjustmentFen"); daily.sourcesKnown = bool(item, "sourcesKnown");
+                    }
                     long unquotedCount = integer(item, "unquotedCount"); bounded(unquotedCount, MAX_HOLDINGS, "未报价持仓数量");
                     daily.unquotedCount = (int) unquotedCount; daily.oldestQuoteTime = string(item, "oldestQuoteTime");
                     state.dailySnapshots.add(daily);
@@ -594,9 +668,11 @@ public final class WealthStore {
             unique(ids, entry.id); clean(entry.type, 40, "记录类型"); clean(entry.title, 80, "记录标题");
             if (entry.detail == null || entry.detail.length() > 500) throw invalid("记录详情无效");
             if (entry.amountFen < -MAX_MONEY_FEN || entry.amountFen > MAX_MONEY_FEN) throw invalid("记录金额超出支持范围");
+            if ("income".equals(entry.type) && entry.amountFen <= 0) throw invalid("收入记录金额必须大于零");
             timestamp(entry.time);
         }
         String previousDay = "";
+        DailySnapshot previousSnapshot = null;
         for (DailySnapshot daily : state.dailySnapshots) {
             if (daily.day == null || !daily.day.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) throw invalid("每日资产日期格式无效");
             try { LocalDate.parse(daily.day, DAY_FORMAT); }
@@ -606,9 +682,18 @@ public final class WealthStore {
             if (!dayAt(daily.recordedAt).equals(daily.day)) throw invalid("每日资产日期与记录时间不一致");
             bounded(daily.cashFen, MAX_MONEY_FEN, "历史可用余额"); bounded(daily.marketFen, MAX_MONEY_FEN, "历史持仓市值");
             bounded(daily.costFen, MAX_MONEY_FEN, "历史持仓成本"); daily.totalFen();
+            if (daily.incomeFen < 0) throw invalid("每日收入累计不能为负数");
+            if (previousSnapshot != null) {
+                otherChangeFen(previousSnapshot, daily);
+                if (daily.sourcesKnown && BigDecimal.valueOf(daily.incomeFen).add(BigDecimal.valueOf(daily.cashAdjustmentFen))
+                        .compareTo(BigDecimal.valueOf(daily.cashFen).subtract(BigDecimal.valueOf(previousSnapshot.cashFen))) != 0) {
+                    throw invalid("完整变化来源与现金变动不一致");
+                }
+            }
             bounded(daily.unquotedCount, MAX_HOLDINGS, "未报价持仓数量");
             if (daily.oldestQuoteTime == null || (!daily.oldestQuoteTime.isEmpty() && !isValidQuoteTime(daily.oldestQuoteTime))) throw invalid("历史行情时间格式无效");
             previousDay = daily.day;
+            previousSnapshot = daily;
         }
     }
     private static long parseDecimal(String text, int scale, long max, String message) {
@@ -630,8 +715,13 @@ public final class WealthStore {
         if (!(value instanceof String)) throw invalid("备份中的 " + key + " 必须为文本");
         return (String) value;
     }
+    private static boolean bool(JSONObject object, String key) throws JSONException {
+        Object value = object.get(key);
+        if (!(value instanceof Boolean)) throw invalid("备份中的 " + key + " 必须为布尔值");
+        return (Boolean) value;
+    }
     private static void history(State state, String type, String title, String detail, long amountFen) {
-        Entry entry = new Entry(); entry.id = id(); entry.type = type; entry.title = title; entry.detail = detail; entry.amountFen = amountFen; entry.time = now();
+        Entry entry = new Entry(); entry.id = id(); entry.type = type; entry.title = title; entry.detail = detail; entry.amountFen = amountFen; entry.time = state.mutationTime;
         state.entries.add(0, entry);
         while (state.entries.size() > MAX_HISTORY) state.entries.remove(state.entries.size() - 1);
     }

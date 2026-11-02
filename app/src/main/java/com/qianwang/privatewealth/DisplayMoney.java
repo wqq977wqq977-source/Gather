@@ -12,7 +12,7 @@ public final class DisplayMoney {
     public static BigDecimal parseRate(String text){if(text==null||!text.matches("[0-9]+(?:\\.[0-9]{1,6})?"))throw new IllegalArgumentException("汇率须为正数，最多 6 位小数");BigDecimal r=new BigDecimal(text);if(r.compareTo(new BigDecimal("0.01"))<0||r.compareTo(new BigDecimal("1000"))>0)throw new IllegalArgumentException("请核对 1 美元对应的人民币金额");return r;}
     public String code(){return usd?"USD":"CNY";}
     public long fen(long cnyFen){return usd?BigDecimal.valueOf(cnyFen).divide(cnyPerUsd,0,RoundingMode.HALF_UP).longValueExact():cnyFen;}
-    public String amount(long value){return String.format(Locale.CHINA,"%,.2f",BigDecimal.valueOf(fen(value),2));}
+    public String amount(long value){BigDecimal amount=BigDecimal.valueOf(value,2);if(usd)amount=amount.divide(cnyPerUsd,2,RoundingMode.HALF_UP);return String.format(Locale.CHINA,"%,.2f",amount);}
     public String compact(long value){return AssetSankey.compact(fen(value));}
     public String signed(long value){return (value>0?"+":"")+amount(value);}
     public String price(long micros){BigDecimal v=BigDecimal.valueOf(micros,6);if(usd)v=v.divide(cnyPerUsd,6,RoundingMode.HALF_UP);v=v.stripTrailingZeros();return v.setScale(Math.max(2,v.scale())).toPlainString();}

@@ -45,7 +45,7 @@ export GUILONG_JAVA_HOME="$ANDROID_TOOLS_HOME/jdk-17.0.21+9-jre/Contents/Home"
 ./gradlew :app:domainCheck
 ```
 
-该入口使用合成数据，在 JVM 执行领域、桑基图及行情／备份检查，不覆盖 Android 实际存储。GitHub Actions 对推送和 PR 运行此检查及 debug 构建。
+该入口使用合成数据，在 JVM 执行领域、桑基图及行情／备份检查。新增的 `ledgerStorageCheck` 使用独立临时目录、测试专用的 Context／AtomicFile 替身与固定版本的 JSON 库，实际执行收入入账、每日来源、旧版迁移、备份往返及写入失败回滚路径；这些测试依赖不会进入 APK。JVM 检查不替代 Android 实际存储与界面验证。GitHub Actions 对推送和 PR 运行此检查及 debug 构建。
 
 离线工具链也可运行：
 

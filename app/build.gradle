@@ -50,7 +50,7 @@ android {
 def domainClasses = layout.buildDirectory.dir('domain-check/classes')
 def domainSources = [
     'WealthStore.java', 'AssetSankey.java', 'AssetTree.java',
-    'DisplayMoney.java', 'QuoteClient.java', 'BackupCodec.java'
+    'DisplayMoney.java', 'DailyChangeText.java', 'QuoteClient.java', 'BackupCodec.java'
 ].collect { file("src/main/java/com/qianwang/privatewealth/${it}") }
 def domainTests = [
     rootProject.file('scripts/WealthDomainTests.java'),
@@ -81,5 +81,40 @@ tasks.register('compileDomainChecks', JavaCompile) {
 tasks.register('domainCheck') {
     group = 'verification'
     description = 'Run synthetic JVM domain, Sankey, quote and backup checks.'
-    dependsOn 'wealthDomainCheck', 'assetsV6Check', 'sankeyCheck', 'quoteBackupCheck'
+    dependsOn 'wealthDomainCheck', 'assetsV6Check', 'sankeyCheck', 'quoteBackupCheck', 'ledgerStorageCheck'
+}
+
+// Execute the actual ledger/JSON paths with isolated JVM filesystem doubles.
+// This dependency and tests/jvm are not part of the APK or Android source sets.
+configurations {
+    ledgerTestJson {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+dependencies {
+    ledgerTestJson 'org.json:json:20240303'
+}
+def ledgerTestClasses = layout.buildDirectory.dir('ledger-storage-check/classes')
+tasks.register('compileLedgerStorageChecks', JavaCompile) {
+    source([
+        file('src/main/java/com/qianwang/privatewealth/WealthStore.java'),
+        file('src/main/java/com/qianwang/privatewealth/DisplayMoney.java'),
+        file('src/main/java/com/qianwang/privatewealth/AssetSankey.java'),
+        file('src/main/java/com/qianwang/privatewealth/DailyChangeText.java'),
+        rootProject.file('scripts/WealthDomainTests.java'),
+        rootProject.file('tests/IncomeSourcesTest.java')
+    ] + rootProject.fileTree('tests/jvm') { include '**/*.java' }.files)
+    classpath = configurations.ledgerTestJson
+    destinationDirectory = ledgerTestClasses
+    options.encoding = 'UTF-8'
+    sourceCompatibility = '8'
+    targetCompatibility = '8'
+}
+tasks.register('ledgerStorageCheck', JavaExec) {
+    group = 'verification'
+    description = 'Check income, daily sources, migrations and failed writes in isolated JVM files.'
+    dependsOn 'compileLedgerStorageChecks'
+    classpath = files(ledgerTestClasses, configurations.ledgerTestJson)
+    mainClass = 'com.qianwang.privatewealth.IncomeSourcesTest'
 }
