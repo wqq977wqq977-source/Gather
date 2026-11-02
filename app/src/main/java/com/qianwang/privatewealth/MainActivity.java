@@ -123,6 +123,10 @@ public class MainActivity extends Activity {
         if(n<2){r.addView(text(n==0?"添加账户后开始记录":"已开始记录 · 累积两天即可对比",12,muted,false));}
         else{WealthStore.DailySnapshot last=history.get(n-1),previous=history.get(n-2);boolean adjacent=LocalDate.parse(previous.day).plusDays(1).toString().equals(last.day);String label=last.day.equals(WealthStore.today())?(adjacent?"今日变化":"较上次记录"):"最近记录变化";long delta=last.totalFen()-previous.totalFen();r.addView(text(label+"  ",12,muted,false));r.addView(number(signed(delta),15,hidden?muted:changeColor(delta)));TextView ratio=text("  "+changePercent(previous.totalFen(),last.totalFen()),11,muted,false);r.addView(ratio);}
         body.addView(r);
+        if(n>1||(n==1&&history.get(0).incomeFen>0)){
+            space(body,7);
+            body.addView(text(DailyChangeText.describe(n>1?history.get(n-2):null,history.get(n-1),money,hidden),11,muted,false));
+        }
     }
     private void statistics(){
         if(store.accounts.isEmpty()&&store.dailySnapshots.isEmpty()){empty("看见资产的每一步。","建立账户后，每天保留一份资产记录。", "添加账户",()->accountForm(null));space(body,12);LinearLayout sample=row();sample.setGravity(Gravity.CENTER);sample.addView(textAction("先看看示例",()->{safe(this::createPreview);render();}));body.addView(sample);return;}
@@ -178,10 +182,23 @@ public class MainActivity extends Activity {
         LinearLayout row=row();row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(48));TextView label=text(title,13,ink,false);label.setPadding(0,dp(8),dp(10),dp(8));row.addView(label,weight());TextView balance=number(amount(value),14,muted);balance.setGravity(Gravity.END);row.addView(balance,weight());if(action!=null){row.setBackground(selectable());row.setOnClickListener(v->action.run());row.setFocusable(true);row.setContentDescription(title+"，"+amount(value)+"，管理账户");}parent.addView(row);divider(parent);
     }
 
+    private WealthStore.DailySnapshot previousSnapshot(WealthStore.DailySnapshot current){
+        WealthStore.DailySnapshot previous=null;
+        for(WealthStore.DailySnapshot d:store.dailySnapshots){if(d.day.compareTo(current.day)>=0)break;previous=d;}
+        return previous;
+    }
     private void dailyRow(LinearLayout target,WealthStore.DailySnapshot current){
-        WealthStore.DailySnapshot previous=null;for(WealthStore.DailySnapshot d:store.dailySnapshots){if(d.day.compareTo(current.day)>=0)break;previous=d;}
+        WealthStore.DailySnapshot previous=previousSnapshot(current);
         String state=previous==null?"首条记录":LocalDate.parse(previous.day).plusDays(1).toString().equals(current.day)?"较前日":"较上次记录";
-        LinearLayout row=row();row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(14),0,dp(14));LinearLayout left=column();left.addView(text((dailyPage?current.day:dayLabel(current.day))+(current.day.equals(WealthStore.today())?" · 今天":""),13,ink,true));space(left,6);left.addView(text(state,11,muted,false));row.addView(left,weight());LinearLayout right=column();TextView balance=number(amount(current.totalFen()),16,ink);balance.setGravity(Gravity.END);right.addView(balance);space(right,6);long delta=previous==null?0:current.totalFen()-previous.totalFen();TextView change=number(previous==null?"—":signed(delta),12,hidden?muted:changeColor(delta));change.setGravity(Gravity.END);right.addView(change);row.addView(right,weight());row.setBackground(selectable());row.setOnClickListener(v->snapshotInfo(current));target.addView(row);divider(target);
+        LinearLayout card=column();card.setPadding(0,dp(14),0,dp(14));
+        LinearLayout row=row();row.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout left=column();left.addView(text((dailyPage?current.day:dayLabel(current.day))+(current.day.equals(WealthStore.today())?" · 今天":""),13,ink,true));space(left,6);left.addView(text(state,11,muted,false));row.addView(left,weight());
+        LinearLayout right=column();TextView balance=number(amount(current.totalFen()),16,ink);balance.setGravity(Gravity.END);right.addView(balance);space(right,6);
+        long delta=previous==null?0:current.totalFen()-previous.totalFen();String changeText=previous==null?"—":signed(delta);
+        TextView change=number(changeText,12,hidden?muted:changeColor(delta));change.setGravity(Gravity.END);right.addView(change);row.addView(right,weight());card.addView(row);
+        String sources=DailyChangeText.describe(previous,current,money,hidden);
+        space(card,8);card.addView(text(sources,11,muted,false));
+        card.setBackground(selectable());card.setFocusable(true);card.setContentDescription(current.day+"，总资产 "+amount(current.totalFen())+"，"+state+" "+changeText+"，"+sources);card.setOnClickListener(v->snapshotInfo(current));target.addView(card);divider(target);
     }
     private void dailyHistoryPage(){
         List<WealthStore.DailySnapshot> history=store.dailySnapshots;body.addView(text("每天保留当天最新的资产估值。",13,muted,false));space(body,12);
@@ -196,10 +213,11 @@ public class MainActivity extends Activity {
     private String changePercent(long first,long last){if(hidden)return "•••";if(first==0)return "—";double value=100d*(last-first)/first;return String.format(Locale.CHINA,(value>0?"+":"")+"%.2f%%",value);}
     private void snapshotInfo(WealthStore.DailySnapshot value){
         String source=value.oldestQuoteTime.isEmpty()?(value.marketFen==0?"不含证券持仓":"尚无有效报价，按录入成本估值"):(preview?"示例行情 ":"最早行情 ")+quoteTime(value.oldestQuoteTime);if(value.unquotedCount>0)source+="\n"+value.unquotedCount+" 笔未报价，按成本估值";
-        new HandDialogBuilder().setTitle(value.day+" 资产记录").setMessage("总资产  "+amount(value.totalFen())+"\n资金余额  "+amount(value.cashFen)+"\n持仓市值  "+amount(value.marketFen)+"\n\n记录更新 "+snapshotTime(value.recordedAt)+"\n"+source).setPositiveButton("知道了",null).show();
+        String changes=DailyChangeText.describe(previousSnapshot(value),value,money,hidden);
+        new HandDialogBuilder().setTitle(value.day+" 资产记录").setMessage("总资产  "+amount(value.totalFen())+"\n资金余额  "+amount(value.cashFen)+"\n持仓市值  "+amount(value.marketFen)+"\n\n变化来源\n"+changes+"\n\n记录更新 "+snapshotTime(value.recordedAt)+"\n"+source).setPositiveButton("知道了",null).show();
     }
     private String snapshotTime(long timestamp){SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.CHINA);format.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));return format.format(new Date(timestamp))+"（北京时间）";}
-    private void statisticsInfo(){new HandDialogBuilder().setTitle("关于资产统计").setMessage("每天保留当天最新记录，时间按北京时间。打开应用、更新账户或行情时记录；后台更新由 Android 择机执行。\n\n资产变化 = 两次记录的总资产差额。包含新增账户、余额调整、持仓数量和市场价格变化，并非投资收益率。账户间划转不改变总资产。\n\n曲线从首次记录开始。没有记录的日期不补造，间隔日期用虚线连接；仅有一条记录时不计算增长。期间变化与最高、最低只统计选定范围内已有记录。\n\n资产分布按当前银行存款、证券持仓、证券现金、其他资金和数字货币计算。行情未更新时沿用上次报价或录入成本，点击每日记录可查看行情时间。\n\n每日记录随加密备份一起保存。").setPositiveButton("知道了",null).show();}
+    private void statisticsInfo(){new HandDialogBuilder().setTitle("关于资产统计").setMessage("每天保留当天最新记录，时间按北京时间。打开应用、更新账户或行情时记录；后台更新由 Android 择机执行。\n\n资产变化 = 两次记录的总资产差额。包含收入、新增账户、余额调整、持仓数量和市场价格变化，并非投资收益率。账户间划转不改变总资产。每日变化下方的小字按收入、余额调整、持仓调整和行情 / 估值列出来源；来源不完整的旧记录保留未分类变化。\n\n曲线从首次记录开始。没有记录的日期不补造，间隔日期用虚线连接；仅有一条记录时不计算增长。期间变化与最高、最低只统计选定范围内已有记录。\n\n资产分布按当前银行存款、证券持仓、证券现金、其他资金和数字货币计算。行情未更新时沿用上次报价或录入成本，点击每日记录可查看行情时间。\n\n每日记录随加密备份一起保存。").setPositiveButton("知道了",null).show();}
     private void welcome(){
         space(body,26);TextView title=text("让资产，\n清晰可见。",32,ink,false);title.setLineSpacing(dp(10),1);body.addView(title);space(body,20);
         body.addView(text("关注大额资金，也看见每一份持仓。",14,muted,false));space(body,38);
@@ -216,10 +234,10 @@ public class MainActivity extends Activity {
         panel.addView(metric("行情变动合计",signed(store.dailyChange()),changeColor(store.dailyChange())),weight());panel.addView(metric("持仓浮盈",signed(store.totalProfit()),changeColor(store.totalProfit())),weight());body.addView(panel);
     }
     private void accounts(){
-        if(store.accounts.isEmpty()){empty("资金，各有归处。","建立银行、证券或其他资金账户。", "添加账户",()->accountForm(null));return;}
+        if(store.accounts.isEmpty()){empty("资金，各有归处。","建立账户，记录余额与新增收入。", "添加资产",this::addAssetMenu);return;}
         body.addView(text("账户总资产",14,muted,false));heroAmount(store.totalAssets());space(body,14);
-        LinearLayout info=row();info.setGravity(Gravity.CENTER_VERTICAL);info.addView(text(store.accounts.size()+" 个账户 · "+money.code(),12,muted,false),weight());info.addView(textAction("添加账户",()->accountForm(null)));body.addView(info);
-        accountGroups();space(body,16);LinearLayout move=row();move.setGravity(Gravity.CENTER);move.addView(textAction("账户间划转",this::transferForm));body.addView(move);
+        LinearLayout info=row();info.setGravity(Gravity.CENTER_VERTICAL);info.addView(text(store.accounts.size()+" 个账户 · "+money.code(),12,muted,false),weight());info.addView(textAction("添加资产",this::addAssetMenu));body.addView(info);
+        accountGroups();space(body,16);LinearLayout move=row();move.setGravity(Gravity.CENTER);move.addView(textAction("记收入",()->incomeForm(null)));move.addView(textAction("账户间划转",this::transferForm));body.addView(move);
     }
     private void accountGroups(){
         for(String kind:new String[]{"securities","crypto","bank","cash"}){
@@ -253,7 +271,7 @@ public class MainActivity extends Activity {
         body.addView(text(a.name,26,ink,true));space(body,9);body.addView(text(kindName(a.kind),12,muted,false));space(body,30);
         body.addView(text("账户总资产",14,muted,false));heroAmount(store.accountTotal(a));space(body,26);
         LinearLayout m=row();m.addView(metric("可用现金",amount(a.cashFen),ink),weight());if("securities".equals(a.kind)||"crypto".equals(a.kind))m.addView(metric("持仓市值",amount(store.accountTotal(a)-a.cashFen),ink),weight());body.addView(m);space(body,28);
-        primary(body,"更新现金余额",()->accountForm(a),true);space(body,8);LinearLayout actions=row();actions.setGravity(Gravity.CENTER);actions.addView(textAction("转入 / 转出",this::transferForm));body.addView(actions);
+        primary(body,"更新现金余额",()->accountForm(a),true);space(body,8);LinearLayout actions=row();actions.setGravity(Gravity.CENTER);actions.addView(textAction("记收入",()->incomeForm(a)));actions.addView(textAction("转入 / 转出",this::transferForm));body.addView(actions);
         if("securities".equals(a.kind)||"crypto".equals(a.kind)){section("账户持仓","添加",()->holdingForm(null,a));List<WealthStore.Holding> list=holdingList(a.id);if(list.isEmpty())body.addView(text("添加持仓，市值将计入这个账户。",14,muted,false));for(WealthStore.Holding h:list)holdingRow(h);}
         section("账户管理",null,null);primary(body,"编辑名称与余额",()->accountForm(a),false);space(body,10);
         Button delete=button("删除账户",()->{if(previewGuard())return;new HandDialogBuilder().setTitle("删除“"+a.name+"”？").setMessage("删除后该账户不再计入总资产。有持仓的账户需先移除持仓。已有变更记录保留。").setNegativeButton("取消",null).setPositiveButton("删除",(d,w)->safe(()->{store.deleteAccount(a.id);detailId=null;render();})).show();},false);delete.setTextColor(red);body.addView(delete,new LinearLayout.LayoutParams(-1,dp(52)));
@@ -271,7 +289,7 @@ public class MainActivity extends Activity {
         WealthStore.Holding eth=sample.addCryptoHolding(wallet.id,"ETH","1.5",14000000000L);eth.lastPriceMicros=15300000000L;eth.previousCloseMicros=15000000000L;eth.quoteTime="20261022150000";
         sample.applyQuotes(new ArrayList<>(sample.holdings));
         try{JSONObject data=new JSONObject(sample.exportJson());JSONArray days=new JSONArray();LocalDate end=LocalDate.parse(WealthStore.today());long cash=sample.totalCash(),market=sample.totalMarketValue(),cost=0;for(WealthStore.Holding h:sample.holdings)cost+=WealthStore.holdingCost(h);
-            for(int i=0;i<90;i++){LocalDate day=end.minusDays(89-i);double progress=i/89d;long value=market-Math.round((1-progress)*7900000)+Math.round((Math.sin(i*.51)*420000+Math.sin(i*.17)*700000)*Math.sin(progress*Math.PI));JSONObject point=new JSONObject();point.put("day",day.toString());point.put("recordedAt",i==89?System.currentTimeMillis():day.atTime(18,0).atZone(ZoneId.of("Asia/Shanghai")).toInstant().toEpochMilli());point.put("cashFen",cash);point.put("marketFen",value);point.put("costFen",cost);point.put("unquotedCount",0);point.put("oldestQuoteTime",day.format(DateTimeFormatter.BASIC_ISO_DATE)+"150000");days.put(point);}data.put("dailySnapshots",days);sample.importJson(data.toString());
+            for(int i=0;i<90;i++){LocalDate day=end.minusDays(89-i);double progress=i/89d;long value=market-Math.round((1-progress)*7900000)+Math.round((Math.sin(i*.51)*420000+Math.sin(i*.17)*700000)*Math.sin(progress*Math.PI));JSONObject point=new JSONObject();point.put("day",day.toString());point.put("recordedAt",i==89?System.currentTimeMillis():day.atTime(18,0).atZone(ZoneId.of("Asia/Shanghai")).toInstant().toEpochMilli());point.put("cashFen",cash);point.put("marketFen",value);point.put("costFen",cost);point.put("unquotedCount",0);point.put("oldestQuoteTime",day.format(DateTimeFormatter.BASIC_ISO_DATE)+"150000");point.put("incomeFen",0);point.put("cashAdjustmentFen",0);point.put("holdingAdjustmentFen",0);point.put("sourcesKnown",true);days.put(point);}data.put("dailySnapshots",days);sample.importJson(data.toString());
         }catch(JSONException e){throw new IllegalStateException("示例历史暂时无法显示",e);}
         store=sample;preview=true;detailId=null;dailyPage=false;sankeyPage=false;
     }
@@ -283,6 +301,40 @@ public class MainActivity extends Activity {
         addInfo(panel,"最新报价",quoted(h)?price(h.lastPriceMicros):"尚未取得");addInfo(panel,"行情时间",quoted(h)?quoteTime(h.quoteTime):"暂按成本估值");
         TextView hint=text("添加或修改已有持仓，不会自动增减账户现金。买卖后请同步更新可用现金。",13,muted,false);hint.setPadding(0,dp(18),0,0);panel.addView(hint);
         new HandDialogBuilder().setTitle(h.name+" · "+(WealthStore.isCrypto(h)?WealthStore.coinSymbol(h.code):h.code.toUpperCase(Locale.ROOT))).setView(panel).setPositiveButton("修改持仓",(d,w)->holdingForm(h,null)).setNegativeButton("返回",null).setNeutralButton("移除",(d,w)->{if(previewGuard())return;new HandDialogBuilder().setTitle("移除这笔持仓？").setMessage("市值将从账户中移除，现金余额保持不变。卖出款请更新到账户现金。").setNegativeButton("取消",null).setPositiveButton("移除",(x,y)->safe(()->{store.deleteHolding(h.id);render();})).show();}).show();
+    }
+    private void addAssetMenu(){
+        if(previewGuard())return;
+        new HandDialogBuilder().setTitle("添加资产")
+                .setItems(new String[]{"添加账户","添加持仓","记一笔收入"},(dialog,index)->{
+                    if(index==0)accountForm(null);
+                    else if(index==1)holdingForm(null,null);
+                    else incomeForm(null);
+                }).setNegativeButton("取消",null).show();
+    }
+    private void incomeForm(WealthStore.Account preferred){
+        if(previewGuard())return;
+        if(store.accounts.isEmpty()){
+            new HandDialogBuilder().setTitle("先添加收款账户")
+                    .setMessage("收入需要记入一个账户。先填写本次收入到账前的现金余额，再记收入。")
+                    .setNegativeButton("稍后",null)
+                    .setPositiveButton("添加账户",(dialog,which)->accountForm(null)).show();
+            return;
+        }
+        List<WealthStore.Account> choices=new ArrayList<>(store.accounts);
+        String[] names=new String[choices.size()];int selected=0;
+        for(int i=0;i<names.length;i++){
+            WealthStore.Account a=choices.get(i);names[i]=a.name+" · "+kindName(a.kind);
+            if(preferred!=null&&preferred.id.equals(a.id))selected=i;
+        }
+        LinearLayout f=form();label(f,"收入到账账户");Spinner account=spinner(names);account.setSelection(selected);f.addView(account);
+        String[] sources={"工资","奖金","其他收入"};label(f,"收入来源");Spinner source=spinner(sources);f.addView(source);
+        EditText value=input(f,"收入金额（人民币元）","","例如 8000.00",true);
+        EditText memo=input(f,"备注（可选）","","例如：10 月工资",false);
+        note(f,"保存后增加所选账户的现金余额，按保存时的北京时间记入当天。已计入余额的收入无需重复录入。");
+        showForm("记一笔收入",f,"确认入账",()->store.recordIncome(
+                choices.get(account.getSelectedItemPosition()).id,
+                WealthStore.parseMoney(value.getText().toString()),
+                sources[source.getSelectedItemPosition()],memo.getText().toString()));
     }
     private void accountForm(WealthStore.Account account){accountForm(account,"bank");}
     private void accountForm(WealthStore.Account account,String preferredKind){
