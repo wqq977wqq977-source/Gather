@@ -67,6 +67,8 @@ def main():
                 ROOT / ("app/src/main/java/com/qianwang/privatewealth/" + n + ".java")
                 for n in [
                     "WealthStore",
+                    "AssetCalendar",
+                    "NavigationLayout",
                     "AssetSankey",
                     "AssetTree",
                     "DisplayMoney",
@@ -74,12 +76,26 @@ def main():
                 ]
             ],
             ROOT / "tests/AssetsV6Test.java",
+            ROOT / "tests/AssetCalendarTest.java",
+            ROOT / "tests/NavigationLayoutTest.java",
         )
         run(
             java,
             "-cp",
             str(classes) + os.pathsep + str(platform),
             "com.qianwang.privatewealth.AssetsV6Test",
+        )
+        run(
+            java,
+            "-cp",
+            str(classes) + os.pathsep + str(platform),
+            "com.qianwang.privatewealth.AssetCalendarTest",
+        )
+        run(
+            java,
+            "-cp",
+            str(classes) + os.pathsep + str(platform),
+            "com.qianwang.privatewealth.NavigationLayoutTest",
         )
         if options.serial:
             if not options.adb:

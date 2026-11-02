@@ -26,6 +26,21 @@ public final class WealthApp extends Application {
             catch(Exception e) {quoteStatus="资产记录保存失败，请重试";}
         }
     }
+    public String fxError;
+    private boolean fxRefreshing;
+    private final List<Runnable> fxCallbacks=new ArrayList<>();
+    public void refreshFx(boolean force,Runnable finished){
+        android.content.SharedPreferences prefs=getSharedPreferences("appearance",0);
+        if(fxRefreshing){if(finished!=null)fxCallbacks.add(finished);return;}
+        long now=System.currentTimeMillis();
+        if(!force&&(!prefs.getBoolean("usd",false)||WealthStore.today().equals(prefs.getString("fxCheckedDay",""))||now-prefs.getLong("fxAttempt",0)<3600000)){if(finished!=null)finished.run();return;}
+        fxRefreshing=true;fxError=null;if(finished!=null)fxCallbacks.add(finished);prefs.edit().putLong("fxAttempt",now).apply();
+        new Thread(()->{String[] rate=null;try{rate=QuoteClient.fetchUsdRate();}catch(Exception ignored){}final String[] result=rate;main.post(()->{
+            if(result!=null)prefs.edit().putString("fxRate",result[0]).putString("fxDate",result[1]).putString("fxCheckedDay",WealthStore.today()).apply();
+            else {boolean cached=false;try{DisplayMoney.parseRate(prefs.getString("fxRate",""));cached=true;}catch(Exception ignored){}if(!cached)prefs.edit().putBoolean("usd",false).apply();fxError=cached?"汇率更新失败，沿用 "+prefs.getString("fxDate","")+" 的汇率。":"汇率获取失败，暂用人民币。请稍后重试。";}
+            fxRefreshing=false;notifyListeners();List<Runnable> callbacks=new ArrayList<>(fxCallbacks);fxCallbacks.clear();for(Runnable callback:callbacks)callback.run();
+        });},"gather-fx").start();
+    }
     public void refresh(Runnable finished) {
         if(store==null || loadError!=null || refreshing || backup.busy()) {if(finished!=null)finished.run();return;}
         // A daily observation is useful even without stocks or a working quote connection.

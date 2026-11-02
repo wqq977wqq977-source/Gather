@@ -550,37 +550,9 @@
           "oklch(95.00% 0.0662 23.32)"
         ]
       },
-      "positive-alert-light": {
+      "positive-light": {
         "role": "secondary",
-        "displayName": "positive-alert-light",
-        "tonalRamp": [
-          "oklch(15.00% 0.1355 27.04)",
-          "oklch(26.43% 0.1355 27.04)",
-          "oklch(37.86% 0.1355 27.04)",
-          "oklch(49.29% 0.1355 27.04)",
-          "oklch(60.71% 0.1355 27.04)",
-          "oklch(72.14% 0.1355 27.04)",
-          "oklch(83.57% 0.1355 27.04)",
-          "oklch(95.00% 0.1355 27.04)"
-        ]
-      },
-      "positive-alert-dark": {
-        "role": "secondary",
-        "displayName": "positive-alert-dark",
-        "tonalRamp": [
-          "oklch(15.00% 0.0772 30.77)",
-          "oklch(26.43% 0.0772 30.77)",
-          "oklch(37.86% 0.0772 30.77)",
-          "oklch(49.29% 0.0772 30.77)",
-          "oklch(60.71% 0.0772 30.77)",
-          "oklch(72.14% 0.0772 30.77)",
-          "oklch(83.57% 0.0772 30.77)",
-          "oklch(95.00% 0.0772 30.77)"
-        ]
-      },
-      "negative-light": {
-        "role": "secondary",
-        "displayName": "negative-light",
+        "displayName": "positive-light",
         "tonalRamp": [
           "oklch(15.00% 0.0730 157.22)",
           "oklch(26.43% 0.0730 157.22)",
@@ -592,9 +564,9 @@
           "oklch(95.00% 0.0730 157.22)"
         ]
       },
-      "negative-dark": {
+      "positive-dark": {
         "role": "secondary",
-        "displayName": "negative-dark",
+        "displayName": "positive-dark",
         "tonalRamp": [
           "oklch(15.00% 0.0640 156.13)",
           "oklch(26.43% 0.0640 156.13)",
@@ -604,6 +576,62 @@
           "oklch(72.14% 0.0640 156.13)",
           "oklch(83.57% 0.0640 156.13)",
           "oklch(95.00% 0.0640 156.13)"
+        ]
+      },
+      "negative-light": {
+        "role": "secondary",
+        "displayName": "negative-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1355 27.04)",
+          "oklch(26.43% 0.1355 27.04)",
+          "oklch(37.86% 0.1355 27.04)",
+          "oklch(49.29% 0.1355 27.04)",
+          "oklch(60.71% 0.1355 27.04)",
+          "oklch(72.14% 0.1355 27.04)",
+          "oklch(83.57% 0.1355 27.04)",
+          "oklch(95.00% 0.1355 27.04)"
+        ]
+      },
+      "negative-dark": {
+        "role": "secondary",
+        "displayName": "negative-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0772 30.77)",
+          "oklch(26.43% 0.0772 30.77)",
+          "oklch(37.86% 0.0772 30.77)",
+          "oklch(49.29% 0.0772 30.77)",
+          "oklch(60.71% 0.0772 30.77)",
+          "oklch(72.14% 0.0772 30.77)",
+          "oklch(83.57% 0.0772 30.77)",
+          "oklch(95.00% 0.0772 30.77)"
+        ]
+      },
+      "alert-light": {
+        "role": "secondary",
+        "displayName": "alert-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1355 27.04)",
+          "oklch(26.43% 0.1355 27.04)",
+          "oklch(37.86% 0.1355 27.04)",
+          "oklch(49.29% 0.1355 27.04)",
+          "oklch(60.71% 0.1355 27.04)",
+          "oklch(72.14% 0.1355 27.04)",
+          "oklch(83.57% 0.1355 27.04)",
+          "oklch(95.00% 0.1355 27.04)"
+        ]
+      },
+      "alert-dark": {
+        "role": "secondary",
+        "displayName": "alert-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0772 30.77)",
+          "oklch(26.43% 0.0772 30.77)",
+          "oklch(37.86% 0.0772 30.77)",
+          "oklch(49.29% 0.0772 30.77)",
+          "oklch(60.71% 0.0772 30.77)",
+          "oklch(72.14% 0.0772 30.77)",
+          "oklch(83.57% 0.0772 30.77)",
+          "oklch(95.00% 0.0772 30.77)"
         ]
       }
     },

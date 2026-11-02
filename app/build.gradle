@@ -10,8 +10,8 @@ android {
         applicationId 'com.qianwang.privatewealth'
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName '0.7.3'
+        versionCode 14
+        versionName '0.9.0'
     }
 
     compileOptions {
@@ -106,6 +106,10 @@ tasks.register('compileLedgerStorageChecks', JavaCompile) {
         file('src/main/java/com/qianwang/privatewealth/DisplayMoney.java'),
         file('src/main/java/com/qianwang/privatewealth/AssetSankey.java'),
         file('src/main/java/com/qianwang/privatewealth/DailyChangeText.java'),
+        file('src/main/java/com/qianwang/privatewealth/AssetCalendar.java'),
+        file('src/main/java/com/qianwang/privatewealth/NavigationLayout.java'),
+        rootProject.file('tests/NavigationLayoutTest.java'),
+        rootProject.file('tests/AssetCalendarTest.java'),
         rootProject.file('scripts/WealthDomainTests.java'),
         rootProject.file('tests/IncomeSourcesTest.java')
     ] + rootProject.fileTree('tests/jvm') { include '**/*.java' }.files)
@@ -122,3 +126,21 @@ tasks.register('ledgerStorageCheck', JavaExec) {
     classpath = files(ledgerTestClasses, configurations.ledgerTestJson)
     mainClass = 'com.qianwang.privatewealth.IncomeSourcesTest'
 }
+
+tasks.register('calendarCheck', JavaExec) {
+    group = 'verification'
+    description = 'Check monthly boundaries and calendar record gaps.'
+    dependsOn 'compileLedgerStorageChecks'
+    classpath = files(ledgerTestClasses, configurations.ledgerTestJson)
+    mainClass = 'com.qianwang.privatewealth.AssetCalendarTest'
+}
+tasks.named('domainCheck') { dependsOn 'calendarCheck' }
+
+tasks.register('navigationCheck', JavaExec) {
+    group = 'verification'
+    description = 'Check navigation order and icon identity.'
+    dependsOn 'compileLedgerStorageChecks'
+    classpath = files(ledgerTestClasses, configurations.ledgerTestJson)
+    mainClass = 'com.qianwang.privatewealth.NavigationLayoutTest'
+}
+tasks.named('domainCheck') { dependsOn 'navigationCheck' }

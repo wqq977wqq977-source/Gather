@@ -264,8 +264,8 @@ public final class WealthStore {
 
     public static final String[] COIN_IDS={"bitcoin","ethereum","solana","binancecoin","ripple","dogecoin","tether","usd-coin"};
     public static final String[] COIN_SYMBOLS={"BTC","ETH","SOL","BNB","XRP","DOGE","USDT","USDC"};
-    public static final String[] ICON_IDS={"auto","bank","wallet","card","hold","coin","safe","home","globe","briefcase","star","gift"};
-    public static final String[] ICON_NAMES={"自动","银行","钱包","银行卡","投资","数字货币","保险箱","房屋","全球","公文包","星标","礼物"};
+    public static final String[] ICON_IDS={"auto","bank","wallet","card","hold","coin","safe","home","globe","briefcase","star","gift","shield","piggy","building","gold","car","plane","book","leaf","target","diamond","heart","cloud"};
+    public static final String[] ICON_NAMES={"自动","银行","钱包","银行卡","投资","数字货币","保险箱","房屋","全球","公文包","星标","礼物","保障","储蓄罐","办公楼","黄金","汽车","旅行","教育","成长","目标","钻石","心愿","云端"};
     public static boolean isCrypto(Holding h){return "crypto".equals(h.assetType);}
     public static String normalizeCryptoCode(String raw){String v=raw==null?"":raw.trim().replaceFirst("(?i)^crypto:","");for(int i=0;i<COIN_IDS.length;i++)if(COIN_IDS[i].equalsIgnoreCase(v)||COIN_SYMBOLS[i].equalsIgnoreCase(v))return "crypto:"+COIN_IDS[i];throw invalid("请选择支持的数字货币");}
     public static String coinSymbol(String code){for(int i=0;i<COIN_IDS.length;i++)if(("crypto:"+COIN_IDS[i]).equals(code))return COIN_SYMBOLS[i];return code;}

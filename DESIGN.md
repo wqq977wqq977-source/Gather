@@ -41,10 +41,12 @@ colors:
   dark-branch-4: "#CAB2DC"
   dark-branch-5: "#8CC9C2"
   dark-branch-6: "#E6AEAA"
-  positive-alert-light: "#A23D36"
-  positive-alert-dark: "#F3B3A7"
-  negative-light: "#376A4D"
-  negative-dark: "#A3D1B3"
+  positive-light: "#376A4D"
+  positive-dark: "#A3D1B3"
+  negative-light: "#A23D36"
+  negative-dark: "#F3B3A7"
+  alert-light: "#A23D36"
+  alert-dark: "#F3B3A7"
 typography:
   display:
     fontFamily: "Patrick Hand, cursive"
@@ -207,7 +209,7 @@ Frontmatter 是颜色的规范来源；`pencil-*` 对应彩铅手帐，`blue-*` 
 
 `branch-1` 至 `branch-4` 依次用于银行存款、证券持仓、证券现金、其他资金；按账户查看时按显示顺序使用六色数组。彩铅配色含蓝、橄榄绿、赭黄、紫、青绿、陶红，蓝墨配色集中在蓝与青灰。按账户的颜色随当前金额排序分配，不是永久账户身份。
 
-`positive-alert` 表示红涨及需要关注的删除／缺失行情提示；`negative` 表示绿跌，零变化回到 `muted`。正负号和状态文字不可省略。
+`positive` 表示绿涨，`negative` 表示红跌；`alert` 独立表示需要关注的删除／缺失行情提示，继续用红色。零变化回到 `muted`。正负号和状态文字不可省略。
 
 **The 色彩有口径 Rule.** 操作、分类与涨跌分别有明确名称和数值，不单独依赖颜色表达意义。
 
