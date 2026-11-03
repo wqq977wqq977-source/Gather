@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:name=".WealthApp"
         android:allowBackup="false"
@@ -23,5 +24,6 @@
             android:name=".QuoteJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />
+        <service android:name=".SnapshotJobService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
     </application>
 </manifest>

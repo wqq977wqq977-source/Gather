@@ -19,6 +19,7 @@ public final class WealthApp extends Application {
     @Override public void onCreate() {
         super.onCreate();
         backup=new BackupWork(this);
+        try{BackgroundJobs.ensure(this);}catch(Exception error){android.util.Log.w("Gather","Background scheduling failed",error);}
         try {store=new WealthStore(this); store.load();}
         catch(Exception e) {loadError="本地数据未能读取，已停止写入。请保留应用数据并从备份恢复。";}
         if(loadError==null) {

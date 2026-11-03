@@ -138,7 +138,6 @@ public class MainActivity extends Activity {
         trendPanel(body,history,190);
         section("资产分布","桑基图",()->{sankeyPage=true;sankeyPath.clear();sankeyAccountKey=null;sankeyCategory=-1;render();});distribution();
         if(!history.isEmpty()){space(body,24);long high=history.get(0).totalFen(),low=high;for(WealthStore.DailySnapshot d:history){high=Math.max(high,d.totalFen());low=Math.min(low,d.totalFen());}LinearLayout range=row();range.addView(metric("期间最高",amount(high),ink),weight());range.addView(metric("期间最低",amount(low),ink),weight());body.addView(range);}
-        section("每日变化","查看日历",()->{tab=4;render();});
     }
     private void calendar(){
         AssetCalendar.Month month=AssetCalendar.build(store.dailySnapshots,calendarMonth);
@@ -292,7 +291,7 @@ public class MainActivity extends Activity {
         new HandDialogBuilder().setTitle(value.day+" 资产记录").setMessage("总资产  "+amount(value.totalFen())+"\n资金余额  "+amount(value.cashFen)+"\n持仓市值  "+amount(value.marketFen)+"\n\n变化来源\n"+changes+"\n\n记录更新 "+snapshotTime(value.recordedAt)+"\n"+source).setPositiveButton("知道了",null).show();
     }
     private String snapshotTime(long timestamp){SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.CHINA);format.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));return format.format(new Date(timestamp))+"（北京时间）";}
-    private void statisticsInfo(){new HandDialogBuilder().setTitle("关于资产统计").setMessage("每天保留当天最新记录，时间按北京时间。打开应用、更新账户或行情时记录；后台更新由 Android 择机执行。\n\n资产变化 = 两次记录的总资产差额。包含收入、新增账户、余额调整、持仓数量和市场价格变化，并非投资收益率。账户间划转不改变总资产。每日变化下方的小字按收入、余额调整、持仓调整和行情 / 估值列出来源；来源不完整时，已记录的行情更新仍单独显示，仅无法追溯的差额保留为未分类变化。\n\n曲线从首次记录开始。没有记录的日期不补造，间隔日期用虚线连接；仅有一条记录时不计算增长。期间变化与最高、最低只统计选定范围内已有记录。\n\n资产分布按当前银行存款、证券持仓、证券现金、其他资金和数字货币计算。行情未更新时沿用上次报价或录入成本，点击每日记录可查看行情时间。\n\n每日记录随加密备份一起保存。").setPositiveButton("知道了",null).show();}
+    private void statisticsInfo(){new HandDialogBuilder().setTitle("关于资产统计").setMessage("每天保留当天最新记录，时间按北京时间。打开应用、更新账户或行情时记录；后台记录不依赖联网，重启后自动恢复；由 Android 择机执行，不保证准点。\n\n资产变化 = 两次记录的总资产差额。包含收入、新增账户、余额调整、持仓数量和市场价格变化，并非投资收益率。账户间划转不改变总资产。每日变化下方的小字按收入、余额调整、持仓调整和行情 / 估值列出来源；来源不完整时，已记录的行情更新仍单独显示，仅无法追溯的差额保留为未分类变化。\n\n曲线从首次记录开始。没有记录的日期不补造，间隔日期用虚线连接；仅有一条记录时不计算增长。期间变化与最高、最低只统计选定范围内已有记录。\n\n资产分布按当前银行存款、证券持仓、证券现金、其他资金和数字货币计算。行情未更新时沿用上次报价或录入成本，点击每日记录可查看行情时间。\n\n每日记录随加密备份一起保存。").setPositiveButton("知道了",null).show();}
     private void welcome(){
         space(body,26);TextView title=text("让资产，\n清晰可见。",32,ink,false);title.setLineSpacing(dp(10),1);body.addView(title);space(body,20);
         body.addView(text("关注大额资金，也看见每一份持仓。",14,muted,false));space(body,38);
@@ -560,7 +559,7 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);sc.addView(list);new HandDialogBuilder().setTitle("最近变更").setView(sc).setPositiveButton("关闭",null).show();
     }
     private void quoteInfo(){
-        new HandDialogBuilder().setTitle("行情与计算").setMessage("行情来源：A 股 / ETF 使用腾讯行情；数字货币使用 CoinGecko 人民币快照。\n\n打开 App 自动刷新，前台每 60 秒检查一次；后台由 Android 择机更新，不能保证准点。持仓页顶部统一展示最早有效报价时间，断网时保留上次报价。公共接口可能延迟或不可用。\n\n总资产 = 所有账户现金 + 持仓市值。\n持仓浮盈 = 当前市值 − 录入成本。\n股票较昨收变动 = 当前数量 ×（现价 − 昨收）；数字货币显示 24 小时涨跌。行情变动合计混合这两种周期，只供观察，不是投资收益。不含日内交易、手续费、分红或已实现收益。\n\n无有效报价时暂按成本估值。股票数量、成本及证券可用现金需要你手动核对；本工具不自动识别交易或拆并股。\n\n联网请求仅发送证券或币种代码，不发送资产金额和账户名称。").setPositiveButton("知道了",null).show();
+        new HandDialogBuilder().setTitle("行情与计算").setMessage("行情来源：A 股 / ETF 使用腾讯行情；数字货币使用 CoinGecko 人民币快照。\n\n打开 App 自动刷新，前台每 60 秒检查一次；后台自动记录最近已知估值，联网后更新行情，手机重启后任务自动恢复。Android 省电限制可能延迟执行；强行停止应用后需重新打开。持仓页顶部统一展示最早有效报价时间，断网时保留上次报价。公共接口可能延迟或不可用。\n\n总资产 = 所有账户现金 + 持仓市值。\n持仓浮盈 = 当前市值 − 录入成本。\n股票较昨收变动 = 当前数量 ×（现价 − 昨收）；数字货币显示 24 小时涨跌。行情变动合计混合这两种周期，只供观察，不是投资收益。不含日内交易、手续费、分红或已实现收益。\n\n无有效报价时暂按成本估值。股票数量、成本及证券可用现金需要你手动核对；本工具不自动识别交易或拆并股。\n\n联网请求仅发送证券或币种代码，不发送资产金额和账户名称。").setPositiveButton("知道了",null).show();
     }
     private void backupChanged(){
         if(app.backup.busy()){
@@ -615,7 +614,7 @@ public class MainActivity extends Activity {
     }
 
     private void scheduleQuotes(){
-        try{JobScheduler scheduler=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);scheduler.schedule(new JobInfo.Builder(721,new ComponentName(this,QuoteJobService.class)).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(60*60*1000).setPersisted(false).build());}catch(Exception ignored){}
+        try{BackgroundJobs.ensure(this);}catch(Exception error){Toast.makeText(this,"后台更新安排失败，下次打开时将重试",Toast.LENGTH_LONG).show();}
     }
     private void showForm(String title,LinearLayout form,String action,Runnable submit){
         editing=true;Dialog dialog=new Dialog(this);LinearLayout sheet=column();sheet.setBackground(shape(surface,24));
