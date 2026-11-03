@@ -7,7 +7,7 @@ on:
       - .github/workflows/release.yml
       - app/build.gradle
       - app/src/main/java/**
-      - docs/releases/0.9.3.md
+      - docs/releases/0.9.6.md
       - scripts/build_apk.py
 permissions:
   contents: write
@@ -76,19 +76,19 @@ jobs:
           new_sha="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/new-cert.txt")"
           test -n "$old_sha"
           test "$old_sha" = "$new_sha" || { echo '::error::Different signing certificate: update would fail. Publication blocked.'; exit 1; }
-          "$aapt" dump badging "$current" | grep -F "versionCode='17' versionName='0.9.3'"
+          "$aapt" dump badging "$current" | grep -F "versionCode='20' versionName='0.9.6'"
           "$aapt" dump badging "$current" | grep -F "package: name='com.qianwang.privatewealth'"
           unzip -t "$current" > /dev/null
           mkdir -p release-files
-          cp "$current" "release-files/Gather-0.9.3-release.apk"
+          cp "$current" "release-files/Gather-0.9.6-release.apk"
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
-          p = Path("release-files/Gather-0.9.3-release.apk")
+          p = Path("release-files/Gather-0.9.6-release.apk")
           digest = hashlib.sha256(p.read_bytes()).hexdigest()
           (p.parent / "SHA256SUMS.txt").write_text(f"{digest}  {p.name}\n")
-          (p.parent / "Gather-0.9.3-release.json").write_text(json.dumps({
-              "versionName": "0.9.3", "versionCode": 17, "package": "com.qianwang.privatewealth",
+          (p.parent / "Gather-0.9.6-release.json").write_text(json.dumps({
+              "versionName": "0.9.6", "versionCode": 20, "package": "com.qianwang.privatewealth",
               "sourceCommit": os.environ["GITHUB_SHA"], "sha256": digest,
               "certificateVerifiedAgainst": "v0.7.1"
           }, ensure_ascii=False, indent=2) + "\n")
@@ -100,12 +100,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.3 >/dev/null 2>&1; then
-            echo '::error::v0.9.3 already exists. Refusing to overwrite a published release.'
+          if gh release view v0.9.6 >/dev/null 2>&1; then
+            echo '::error::v0.9.6 already exists. Refusing to overwrite a published release.'
             exit 1
           fi
-          gh release create v0.9.3 release-files/* --target "$GITHUB_SHA" \
-            --title 'Gather v0.9.3' --notes-file docs/releases/0.9.3.md --latest
+          gh release create v0.9.6 release-files/* --target "$GITHUB_SHA" \
+            --title 'Gather v0.9.6' --notes-file docs/releases/0.9.6.md --latest
       - name: Remove private signing material
         if: always()
         run: rm -f .local/signing/guilong-debug.p12 .local/signing/password.txt

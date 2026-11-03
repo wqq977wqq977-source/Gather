@@ -52,7 +52,23 @@ public class MainActivity extends Activity {
     private boolean sankeyPage=false;
     private String sankeyAccountKey; private int sankeyCategory=-1;
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private final Runnable onUpdate=()->{if(!editing&&!preview&&!app.backup.busy()){int y=viewport==null?0:viewport.getScrollY();refreshSelection=currentSankey==null?null:currentSankey.selectedKey();refreshSankeyScroll=sankeyCanvas==null?0:sankeyCanvas.getScrollX();render();if(viewport!=null)viewport.post(()->viewport.scrollTo(0,y));}};
+    private LinearLayout headerHost,navigationHost;
+    private String renderedRoute;
+    private boolean renderedSankeyByAccount;
+    private View quoteRefreshButton;
+    private final Runnable onUpdate=()->{
+        if(quoteRefreshButton!=null){quoteRefreshButton.setEnabled(!app.refreshing||preview);quoteRefreshButton.setAlpha(quoteRefreshButton.isEnabled()?1f:.4f);}
+        if(!editing&&!preview&&!app.backup.busy()&&!app.refreshing&&!this.settingsPage)refreshVisibleData();
+    };
+    private void refreshVisibleData(){
+        if(body==null||viewport==null||app.loadError!=null)return;
+        try{money=new DisplayMoney(getSharedPreferences("appearance",0).getBoolean("usd",false),getSharedPreferences("appearance",0).getString("fxRate",""));}catch(Exception e){money=new DisplayMoney(false,"");}
+        refreshSelection=currentSankey==null?null:currentSankey.selectedKey();refreshSankeyScroll=sankeyCanvas==null?0:sankeyCanvas.getScrollX();
+        currentSankey=null;sankeyCanvas=null;
+        body.setMinimumHeight(Math.max(body.getMinimumHeight(),body.getHeight()));body.removeAllViews();
+        if(detailId!=null)accountDetail();else if(sankeyPage)sankey();else if(tab==0)overview();else if(tab==1)holdings();else if(tab==3)statistics();else calendar();
+    }
+
     private final Runnable ticker=new Runnable(){public void run(){if(!preview&&!app.backup.busy()){app.refreshFx(false,null);app.refresh(null);}handler.postDelayed(this,60000);}};
 
     @Override public void onCreate(Bundle saved) {
@@ -80,34 +96,46 @@ public class MainActivity extends Activity {
         sketch=new SketchStyle(this);bg=sketch.paper;surface=sketch.surface;ink=sketch.ink;muted=sketch.muted;line=sketch.line;accent=sketch.accent;pale=sketch.pale;
         red=Color.parseColor(night?"#F3B3A7":"#A23D36");positive=Color.parseColor(night?"#A3D1B3":"#376A4D");
     }
+    private String screenRoute(){return (preview?"preview/":"ledger/")+(settingsPage?(navigationSettingsPage?"navigation":"settings"):detailId!=null?"account/"+detailId:sankeyPage?"sankey":"tab/"+tab);}
+    private void ensureScreenShell(){
+        if(root!=null)return;
+        root=column();headerHost=column();navigationHost=column();
+        root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
+        viewport=new ScrollView(this);viewport.setFillViewport(true);viewport.setClipToPadding(false);viewport.setVerticalScrollBarEnabled(false);
+        body=column();body.setPadding(dp(24),dp(24),dp(24),dp(28));viewport.addView(body);
+        root.addView(headerHost);root.addView(viewport,new LinearLayout.LayoutParams(-1,0,1));root.addView(navigationHost);
+        setContentView(root);root.requestApplyInsets();
+    }
     private void render(){
         if(isFinishing())return;
         // Backup workers may hold the store lock or publish restored lists.
         // Do not read the ledger until their main-thread completion callback.
         if(app.backup.busy()){
             backupDeferredRender=true;
-            if(root==null){root=column();root.setBackgroundColor(bg);setContentView(root);}
+            if(root==null){ensureScreenShell();root.setBackgroundColor(bg);}
             return;
         }
         backupDeferredRender=false;
-        currentSankey=null;sankeyCanvas=null;
+        String route=screenRoute();boolean samePage=route.equals(renderedRoute);
+        if(samePage&&sankeyPage&&renderedSankeyByAccount==sankeyByAccount&&currentSankey!=null){refreshSelection=currentSankey.selectedKey();refreshSankeyScroll=sankeyCanvas==null?0:sankeyCanvas.getScrollX();}
+        currentSankey=null;sankeyCanvas=null;quoteRefreshButton=null;
         try{money=new DisplayMoney(getSharedPreferences("appearance",0).getBoolean("usd",false),getSharedPreferences("appearance",0).getString("fxRate",""));}catch(Exception e){money=new DisplayMoney(false,"");}
-        root=column();root.setBackground(sketch.paper(getResources().getDisplayMetrics().density));
-        root.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
-        getWindow().setStatusBarColor(Color.TRANSPARENT);getWindow().setNavigationBarColor(surface);
-        getWindow().getDecorView().setSystemUiVisibility(night?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        setContentView(root);root.requestApplyInsets();root.post(()->applySystemBars(getWindow()));
+        ensureScreenShell();
+        body.setMinimumHeight(samePage?Math.max(body.getMinimumHeight(),body.getHeight()):0);
+        if(!samePage)viewport.scrollTo(0,0);
+        headerHost.removeAllViews();navigationHost.removeAllViews();body.removeAllViews();
+        renderedRoute=route;renderedSankeyByAccount=sankeyByAccount;
+        root.setBackground(sketch.paper(getResources().getDisplayMetrics().density));
+        getWindow().setStatusBarColor(Color.TRANSPARENT);getWindow().setNavigationBarColor(surface);applySystemBars(getWindow());
         LinearLayout top=row();top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(24),dp(4),dp(12),dp(4));
         if(settingsPage||detailId!=null||sankeyPage)top.addView(iconButton("back","返回",()->{if(settingsPage){if(navigationSettingsPage)navigationSettingsPage=false;else settingsPage=false;}else if(detailId!=null)detailId=null;else if(sankeyPage&&!sankeyPath.isEmpty()){sankeyPath.remove(sankeyPath.size()-1);sankeyAccountKey=null;}else {sankeyPage=false;}render();}));
         else if(tab==0){Icon mark=new Icon(this,"mark",ink);top.addView(mark,new LinearLayout.LayoutParams(dp(24),dp(24)));Space gap=new Space(this);top.addView(gap,new LinearLayout.LayoutParams(dp(10),1));}
         TextView title=text(settingsPage?(navigationSettingsPage?"底部导航":"设置与数据"):detailId!=null?"账户详情":sankeyPage?"资产桑基图":tab==4?"资产日历":tab==0?"Gather":tab==1?"资产持仓":tab==3?"资产统计":"资金账户",20,ink,true);
         title.setGravity(Gravity.CENTER_VERTICAL);top.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
-        if(!settingsPage&&tab==1&&detailId==null){View refresh=iconButton("refresh",preview?"示例行情说明":app.refreshing?"行情更新中":"刷新行情",()->{if(preview)message("此页为静态示例行情，不是你的实际持仓或当前价格。");else app.refresh(null);});refresh.setEnabled(!app.refreshing||preview);refresh.setAlpha(refresh.isEnabled()?1f:.4f);top.addView(refresh);}
+        if(!settingsPage&&tab==1&&detailId==null){View refresh=iconButton("refresh",preview?"示例行情说明":app.refreshing?"行情更新中":"刷新行情",()->{if(preview)message("此页为静态示例行情，不是你的实际持仓或当前价格。");else app.refresh(null);});quoteRefreshButton=refresh;refresh.setEnabled(!app.refreshing||preview);refresh.setAlpha(refresh.isEnabled()?1f:.4f);top.addView(refresh);}
         if(!settingsPage)top.addView(iconButton("eye",hidden?"显示金额":"隐藏金额",()->{hidden=!hidden;getPreferences(0).edit().putBoolean("hide",hidden).apply();render();}));
-        if(!settingsPage)top.addView(iconButton("settings","设置与备份",this::settings));root.addView(top);divider(root);
-        if(preview){LinearLayout bar=row();bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(24),0,dp(12),0);bar.setBackgroundColor(pale);bar.addView(text("示例预览 · 不计入你的资产",11,accent,false),weight());bar.addView(textAction("退出",this::exitPreview));root.addView(bar);}
-        viewport=new ScrollView(this);viewport.setFillViewport(true);viewport.setClipToPadding(false);viewport.setVerticalScrollBarEnabled(false);
-        body=column();body.setPadding(dp(24),dp(24),dp(24),dp(28));viewport.addView(body);root.addView(viewport,new LinearLayout.LayoutParams(-1,0,1));
+        if(!settingsPage)top.addView(iconButton("settings","设置与备份",this::settings));headerHost.addView(top);divider(headerHost);
+        if(preview){LinearLayout bar=row();bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(24),0,dp(12),0);bar.setBackgroundColor(pale);bar.addView(text("示例预览 · 不计入你的资产",11,accent,false),weight());bar.addView(textAction("退出",this::exitPreview));headerHost.addView(bar);}
         if(!settingsPage&&app.loadError!=null&&!preview){empty("数据暂时无法读取",app.loadError,"导入备份",this::chooseImport);return;}
         if(settingsPage){if(navigationSettingsPage)navigationSettings();else settingsHome();}else if(detailId!=null)accountDetail();else if(sankeyPage)sankey();else if(tab==0)overview();else if(tab==1)holdings();else if(tab==3)statistics();else calendar();
         if(!settingsPage)navigation();
@@ -140,23 +168,30 @@ public class MainActivity extends Activity {
         if(!history.isEmpty()){space(body,24);long high=history.get(0).totalFen(),low=high;for(WealthStore.DailySnapshot d:history){high=Math.max(high,d.totalFen());low=Math.min(low,d.totalFen());}LinearLayout range=row();range.addView(metric("期间最高",amount(high),ink),weight());range.addView(metric("期间最低",amount(low),ink),weight());body.addView(range);}
     }
     private void calendar(){
+        LinearLayout content=column();body.addView(content);calendarContent(content);
+    }
+    private void refreshCalendar(LinearLayout content){
+        content.setMinimumHeight(Math.max(content.getMinimumHeight(),content.getHeight()));content.removeAllViews();calendarContent(content);
+    }
+    private void calendarContent(LinearLayout parent){
+        List<Runnable> selectionUpdates=new ArrayList<>();LinearLayout dayDetail=column();
         AssetCalendar.Month month=AssetCalendar.build(store.dailySnapshots,calendarMonth);
         YearMonth now=YearMonth.from(LocalDate.parse(WealthStore.today()));
         YearMonth earliest=store.dailySnapshots.isEmpty()?now:YearMonth.from(LocalDate.parse(store.dailySnapshots.get(0).day));
         LinearLayout heading=row();heading.setGravity(Gravity.CENTER_VERTICAL);
-        View before=iconButton("chevronLeft","上个月",()->{calendarMonth=calendarMonth.minusMonths(1);calendarSelected=null;render();});
+        View before=iconButton("chevronLeft","上个月",()->{calendarMonth=calendarMonth.minusMonths(1);calendarSelected=null;refreshCalendar(parent);});
         before.setEnabled(calendarMonth.isAfter(earliest));before.setAlpha(before.isEnabled()?1f:.3f);heading.addView(before);
         TextView title=text(calendarMonth.getYear()+" 年 "+calendarMonth.getMonthValue()+" 月",22,ink,true);title.setGravity(Gravity.CENTER);heading.addView(title,weight());
-        View after=iconButton("chevronRight","下个月",()->{calendarMonth=calendarMonth.plusMonths(1);calendarSelected=null;render();});
-        after.setEnabled(calendarMonth.isBefore(now));after.setAlpha(after.isEnabled()?1f:.3f);heading.addView(after);body.addView(heading);
+        View after=iconButton("chevronRight","下个月",()->{calendarMonth=calendarMonth.plusMonths(1);calendarSelected=null;refreshCalendar(parent);});
+        after.setEnabled(calendarMonth.isBefore(now));after.setAlpha(after.isEnabled()?1f:.3f);heading.addView(after);parent.addView(heading);
         LinearLayout tools=row();tools.setGravity(Gravity.CENTER_VERTICAL);
         if(store.accounts.isEmpty()&&store.dailySnapshots.isEmpty())tools.addView(textAction("添加账户",()->accountForm(null)),weight());
-        else tools.addView(textAction("回到本月",()->{calendarMonth=now;calendarSelected=null;render();}),weight());
+        else tools.addView(textAction("回到本月",()->{calendarMonth=now;calendarSelected=null;refreshCalendar(parent);}),weight());
         for(boolean percent:new boolean[]{false,true}){
-            TextView option=textAction(percent?"涨跌幅":"金额",()->{calendarPercent=percent;getPreferences(0).edit().putBoolean("calendarPercent",percent).apply();render();});
+            TextView option=textAction(percent?"涨跌幅":"金额",()->{if(calendarPercent==percent)return;calendarPercent=percent;getPreferences(0).edit().putBoolean("calendarPercent",percent).apply();refreshCalendar(parent);});
             option.setSelected(calendarPercent==percent);option.setBackground(calendarPercent==percent?shape(pale,10):selectable());tools.addView(option);
         }
-        body.addView(tools);space(body,12);
+        parent.addView(tools);space(parent,12);
         LinearLayout grid=column();
         LinearLayout weekdays=row();
         for(String label:new String[]{"一","二","三","四","五","六","日"}){TextView day=text(label,12,muted,false);day.setGravity(Gravity.CENTER);weekdays.addView(day,new LinearLayout.LayoutParams(0,dp(32),1));}
@@ -174,33 +209,39 @@ public class MainActivity extends Activity {
                 int color=hidden||!day.comparable()?muted:changeColor(day.delta());
                 LinearLayout cell=column();cell.setGravity(Gravity.CENTER);cell.setPadding(dp(1),dp(7),dp(1),dp(7));
                 cell.setMinimumHeight(dp(Math.max(68,58*getResources().getConfiguration().fontScale)));
-                if(selected)cell.setBackground(sketch.box(pale,accent,getResources().getDisplayMetrics().density));
-                else if(day.comparable()&&!hidden&&day.delta()!=0){int tint=blendColor(surface,color,.09f);cell.setBackground(sketch.box(tint,blendColor(surface,color,.25f),getResources().getDisplayMetrics().density));}
-                else cell.setBackground(selectable());
                 TextView date=text(String.valueOf(day.date.getDayOfMonth())+(today?"·":""),14,today?accent:day.current==null?muted:ink,selected);date.setGravity(Gravity.CENTER);cell.addView(date);
                 space(cell,7);String value=calendarCellValue(day);TextView change=text(value,11,color,false);change.setGravity(Gravity.CENTER);change.setMaxLines(1);change.setAutoSizeTextTypeUniformWithConfiguration(9,11,1,android.util.TypedValue.COMPLEX_UNIT_SP);cell.addView(change,new LinearLayout.LayoutParams(-1,dp(20)));
                 cell.setSelected(selected);cell.setFocusable(true);cell.setContentDescription(day.date+"，"+(hidden?"金额已隐藏":day.comparable()?"资产变化 "+money.signed(day.delta())+"，"+changePercent(day.previous.totalFen(),day.current.totalFen()):day.gap()?"记录有间隔，点击查看":day.current==null?"无记录":"首条记录"));
-                cell.setOnClickListener(v->{calendarSelected=day.date.toString();int y=viewport.getScrollY();render();viewport.post(()->viewport.scrollTo(0,y));});
+                Runnable updateSelection=()->calendarSelection(cell,date,day);selectionUpdates.add(updateSelection);updateSelection.run();
+                cell.setOnClickListener(v->{if(day.date.toString().equals(calendarSelected))return;calendarSelected=day.date.toString();for(Runnable update:selectionUpdates)update.run();dayDetail.setMinimumHeight(Math.max(dayDetail.getMinimumHeight(),dayDetail.getHeight()));dayDetail.removeAllViews();calendarDayDetail(dayDetail,month);});
                 LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-1,1);cp.setMargins(dp(1),dp(2),dp(1),dp(2));weekRow.addView(cell,cp);
             }
             grid.addView(weekRow,new LinearLayout.LayoutParams(-1,-2));
         }
         HorizontalScrollView calendarScroll=new HorizontalScrollView(this);calendarScroll.setFillViewport(true);calendarScroll.setHorizontalScrollBarEnabled(false);
-        grid.setMinimumWidth(dp(350));calendarScroll.addView(grid,new android.widget.FrameLayout.LayoutParams(-1,-2));body.addView(calendarScroll);
-        space(body,22);divider(body);space(body,18);
+        grid.setMinimumWidth(dp(350));calendarScroll.addView(grid,new android.widget.FrameLayout.LayoutParams(-1,-2));parent.addView(calendarScroll);
+        space(parent,22);divider(parent);space(parent,18);
         LinearLayout summary=row();String label=month.startsAtBoundary()?"本月资产变化":"有记录期间变化";
         summary.addView(metric(label,month.comparable()?(calendarPercent?changePercent(month.baseline.totalFen(),month.last.totalFen()):signed(month.delta())):"—",hidden||!month.comparable()?ink:changeColor(month.delta())),weight());
-        LinearLayout count=column();count.addView(text("上涨 / 下跌天数",12,muted,false));space(count,8);count.addView(number(hidden?"••• / •••":month.rising+" / "+month.falling,20,ink));summary.addView(count,weight());body.addView(summary);space(body,10);
+        LinearLayout count=column();count.addView(text("上涨 / 下跌天数",12,muted,false));space(count,8);count.addView(number(hidden?"••• / •••":month.rising+" / "+month.falling,20,ink));summary.addView(count,weight());parent.addView(summary);space(parent,10);
         String period=month.comparable()?month.baseline.day+" → "+month.last.day:month.recorded==0?"本月暂无记录":"尚无可比较的两条记录";
-        body.addView(text(period,11,muted,false));
-        section("当日记录",null,null);
-        AssetCalendar.Day selected=null;for(AssetCalendar.Day day:month.days)if(day.date.toString().equals(calendarSelected))selected=day;
-        if(selected!=null&&selected.current!=null)dailyRow(body,selected.current);
-        else body.addView(text(selected==null?"选择日期，查看资产变化与来源。":selected.date+" · 没有资产记录",13,muted,false));
+        parent.addView(text(period,11,muted,false));
+        space(parent,24);parent.addView(text("当日记录",18,ink,true));space(parent,12);parent.addView(dayDetail);calendarDayDetail(dayDetail,month);
         if(store.accounts.isEmpty()&&store.dailySnapshots.isEmpty()){
-            space(body,18);primary(body,"添加第一个账户",()->accountForm(null),true);
-            body.addView(textAction("先看看示例",()->{safe(this::createPreview);render();}));
+            space(parent,18);primary(parent,"添加第一个账户",()->accountForm(null),true);
+            parent.addView(textAction("先看看示例",()->{safe(this::createPreview);render();}));
         }
+    }
+    private void calendarSelection(LinearLayout cell,TextView date,AssetCalendar.Day day){
+        boolean selected=day.date.toString().equals(calendarSelected);cell.setSelected(selected);date.setTypeface(hand,selected?Typeface.BOLD:Typeface.NORMAL);
+        if(selected)cell.setBackground(sketch.box(pale,accent,getResources().getDisplayMetrics().density));
+        else if(day.comparable()&&!hidden&&day.delta()!=0){int color=changeColor(day.delta());cell.setBackground(sketch.box(blendColor(surface,color,.09f),blendColor(surface,color,.25f),getResources().getDisplayMetrics().density));}
+        else cell.setBackground(selectable());
+    }
+    private void calendarDayDetail(LinearLayout target,AssetCalendar.Month month){
+        AssetCalendar.Day selected=null;for(AssetCalendar.Day day:month.days)if(day.date.toString().equals(calendarSelected))selected=day;
+        if(selected!=null&&selected.current!=null)dailyRow(target,selected.current);
+        else target.addView(text(selected==null?"选择日期，查看资产变化与来源。":selected.date+" · 没有资产记录",13,muted,false));
     }
     private String calendarCellValue(AssetCalendar.Day day){
         if(hidden)return day.current==null?"—":"•••";
@@ -232,8 +273,24 @@ public class MainActivity extends Activity {
         WealthCharts.TrendView chart=new WealthCharts.TrendView(this,points,figures,accent,ink,muted,line,hidden);chart.setCurrencyLabel(money.code());chart.setOnSelectionListener(index->{WealthStore.DailySnapshot d=history.get(index);date.setText(snapshotLabel(d));value.setText(amount(d.totalFen()));});parent.addView(chart,new LinearLayout.LayoutParams(-1,dp(height)));
     }
     private void distribution(){
-        LinearLayout modes=row();String[] labels={"类别","账户","持仓"};
-        for(int i=0;i<labels.length;i++){final int mode=i;TextView option=text(labels[i],14,distributionMode==i?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setBackground(distributionMode==i?shape(pale,10):selectable());option.setOnClickListener(v->{distributionMode=mode;int y=viewport.getScrollY();render();viewport.post(()->viewport.scrollTo(0,y));});modes.addView(option,weight());}body.addView(modes);space(body,12);
+        LinearLayout modes=row(),content=column();String[] labels={"类别","账户","持仓"};
+        for(int i=0;i<labels.length;i++){
+            final int mode=i;TextView option=text(labels[i],14,distributionMode==i?accent:muted,true);
+            option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(distributionMode==i);
+            option.setBackground(distributionMode==i?shape(pale,10):selectable());
+            option.setOnClickListener(v->{
+                if(distributionMode==mode)return;
+                distributionMode=mode;
+                for(int j=0;j<modes.getChildCount();j++){TextView item=(TextView)modes.getChildAt(j);boolean selected=j==mode;item.setSelected(selected);item.setTextColor(selected?accent:muted);item.setBackground(selected?shape(pale,10):selectable());}
+                // Preserve the page and its scroll range even when the new legend is shorter.
+                content.setMinimumHeight(Math.max(content.getMinimumHeight(),content.getHeight()));
+                content.removeAllViews();distributionContent(content);
+            });
+            modes.addView(option,weight());
+        }
+        body.addView(modes);space(body,12);body.addView(content);distributionContent(content);
+    }
+    private void distributionContent(LinearLayout parent){
         List<WealthCharts.Slice> slices=new ArrayList<>();int[] colors=sketch.colors();
         if(distributionMode==0){AssetSankey allocation=AssetSankey.build(store.accounts,store.holdings);for(int k=0;k<AssetSankey.CATEGORY_NAMES.length;k++)if(allocation.categoryValue(k)>0)slices.add(new WealthCharts.Slice(AssetSankey.CATEGORY_NAMES[k],allocation.categoryValue(k),colors[k%colors.length]));}
         else if(distributionMode==1){for(WealthStore.Account account:store.accounts){long value=store.accountTotal(account);if(value>0)slices.add(new WealthCharts.Slice(account.name,value,colors[slices.size()%colors.length]));}}
@@ -244,13 +301,13 @@ public class MainActivity extends Activity {
         LinearLayout legend=column();legend.setPadding(dp(14),0,0,0);long total=store.totalAssets();
         if(slices.isEmpty())legend.addView(text("账户余额为零时，\n暂不绘制占比。",12,muted,false));
         for(int i=0;i<slices.size();i++){final int index=i;WealthCharts.Slice slice=slices.get(i);LinearLayout item=column();item.setMinimumHeight(dp(48));item.setPadding(0,dp(3),0,dp(3));LinearLayout title=row();title.setGravity(Gravity.CENTER_VERTICAL);View dot=new View(this);dot.setBackground(shape(slice.color,4));title.addView(dot,new LinearLayout.LayoutParams(dp(6),dp(6)));TextView name=text(slice.label,11,ink,false);name.setPadding(dp(6),0,0,0);title.addView(name,weight());TextView pct=number(hidden?"•••":String.format(Locale.CHINA,"%.1f%%",100d*slice.valueFen/total),11,muted);title.addView(pct);item.addView(title);TextView number=number(amount(slice.valueFen),13,ink);number.setPadding(dp(12),dp(5),0,0);item.addView(number);item.setContentDescription(slice.label+"，"+(hidden?"金额已隐藏":amount(slice.valueFen)));item.setFocusable(true);item.setBackground(selectable());item.setOnClickListener(v->chart.setSelectedIndex(index));legend.addView(item);}
-        panel.addView(legend,weight());body.addView(panel);
-        if(!slices.isEmpty()&&total>0){space(body,16);LinearLayout insight=row();insight.addView(metric("最大占比 · "+slices.get(0).label,hidden?"•••":String.format(Locale.CHINA,"%.1f%%",100d*slices.get(0).valueFen/total),ink),weight());insight.addView(metric("现金占比",hidden?"•••":String.format(Locale.CHINA,"%.1f%%",100d*store.totalCash()/total),ink),weight());body.addView(insight);}
+        panel.addView(legend,weight());parent.addView(panel);
+        if(!slices.isEmpty()&&total>0){space(parent,16);LinearLayout insight=row();insight.addView(metric("最大占比 · "+slices.get(0).label,hidden?"•••":String.format(Locale.CHINA,"%.1f%%",100d*slices.get(0).valueFen/total),ink),weight());insight.addView(metric("现金占比",hidden?"•••":String.format(Locale.CHINA,"%.1f%%",100d*store.totalCash()/total),ink),weight());parent.addView(insight);}
     }
     private void sankey(){
         sankeyPath.clear();
         AssetTree.Node data=AssetTree.build(store.accounts,store.holdings,sankeyByAccount);
-        LinearLayout modes=row();for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(accounts?"按账户":"按类别",14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setFocusable(true);option.setOnClickListener(v->{sankeyByAccount=accounts;refreshSelection=null;sankeyExpanded=false;refreshSankeyScroll=0;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();render();});modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
+        LinearLayout modes=row();for(int i=0;i<2;i++){final boolean accounts=i==1;TextView option=text(accounts?"按账户":"按类别",14,sankeyByAccount==accounts?accent:muted,true);option.setGravity(Gravity.CENTER);option.setMinimumHeight(dp(48));option.setSelected(sankeyByAccount==accounts);option.setBackground(sankeyByAccount==accounts?shape(pale,10):selectable());option.setFocusable(true);option.setOnClickListener(v->{if(sankeyByAccount==accounts)return;sankeyByAccount=accounts;refreshSelection=null;sankeyExpanded=false;refreshSankeyScroll=0;getPreferences(0).edit().putBoolean("sankeyByAccount",accounts).apply();render();});modes.addView(option,new LinearLayout.LayoutParams(0,-2,1));}body.addView(modes);
         space(body,12);
         MultiLayerSankeyView chart=new MultiLayerSankeyView(this,data,money,figures,hidden,sankeyByAccount);
         currentSankey=chart;HorizontalScrollView canvas=new HorizontalScrollView(this);sankeyCanvas=canvas;canvas.setFillViewport(true);canvas.setHorizontalScrollBarEnabled(true);canvas.addView(chart,new android.widget.FrameLayout.LayoutParams(sankeyExpanded?chart.detailWidth():-1,chart.desiredHeight()));
@@ -608,9 +665,9 @@ public class MainActivity extends Activity {
         LinearLayout r=row();r.setGravity(Gravity.CENTER_VERTICAL);TextView label=text(value,10,muted,false);r.addView(label,weight());body.addView(r);
     }
     private void navigation(){
-        divider(root);LinearLayout nav=row();nav.setPadding(dp(8),dp(5),dp(8),dp(4));nav.setBackgroundColor(surface);
+        divider(navigationHost);LinearLayout nav=row();nav.setPadding(dp(8),dp(5),dp(8),dp(4));nav.setBackgroundColor(surface);
         int[] pages=navOrder();
-        for(int i=0;i<4;i++){final int index=pages[i];boolean active=tab==index;LinearLayout item=column();item.setGravity(Gravity.CENTER);FrameLayout capsule=new FrameLayout(this);capsule.setBackground(active?shape(pale,16):new ColorDrawable(Color.TRANSPARENT));Icon icon=new Icon(this,navIcon(index),active?accent:muted);FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER);capsule.addView(icon,ip);item.addView(capsule,new LinearLayout.LayoutParams(dp(56),dp(32)));TextView label=text(NavigationLayout.label(index),11,active?accent:muted,false);label.setGravity(Gravity.CENTER);label.setPadding(0,dp(5),0,0);item.addView(label);item.setBackground(selectable());item.setContentDescription(NavigationLayout.label(index));item.setFocusable(true);item.setSelected(active);item.setOnClickListener(v->{tab=index;detailId=null;sankeyPage=false;render();});nav.addView(item,new LinearLayout.LayoutParams(0,dp(64),1));}root.addView(nav);
+        for(int i=0;i<4;i++){final int index=pages[i];boolean active=tab==index;LinearLayout item=column();item.setGravity(Gravity.CENTER);FrameLayout capsule=new FrameLayout(this);capsule.setBackground(active?shape(pale,16):new ColorDrawable(Color.TRANSPARENT));Icon icon=new Icon(this,navIcon(index),active?accent:muted);FrameLayout.LayoutParams ip=new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER);capsule.addView(icon,ip);item.addView(capsule,new LinearLayout.LayoutParams(dp(56),dp(32)));TextView label=text(NavigationLayout.label(index),11,active?accent:muted,false);label.setGravity(Gravity.CENTER);label.setPadding(0,dp(5),0,0);item.addView(label);item.setBackground(selectable());item.setContentDescription(NavigationLayout.label(index));item.setFocusable(true);item.setSelected(active);item.setOnClickListener(v->{if(tab==index&&detailId==null&&!sankeyPage)return;tab=index;detailId=null;sankeyPage=false;render();});nav.addView(item,new LinearLayout.LayoutParams(0,dp(64),1));}navigationHost.addView(nav);
     }
 
     private void scheduleQuotes(){

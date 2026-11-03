@@ -42,7 +42,7 @@ public final class SettingsInstrumentation extends Instrumentation {
         check("4,0,3,1".equals(NavigationLayout.encode((int[])invokeResult("navOrder"))),"reset order");check(!activity.getSharedPreferences("appearance",0).contains("navIcon_0"),"reset removes overrides");
         click("返回");ui(()->{activity.getSharedPreferences("appearance",0).edit().putInt("sketch",1).apply();invoke("palette");invoke("render");});capture("settings-blue");
     }
-    private void LinearLayoutCheck(){android.widget.LinearLayout root=(android.widget.LinearLayout)get("root");ViewGroup nav=(ViewGroup)root.getChildAt(root.getChildCount()-1);check("总览".contentEquals(nav.getChildAt(0).getContentDescription()),"real bottom nav reorders");check("日历".contentEquals(nav.getChildAt(1).getContentDescription()),"real second destination");}
+    private void LinearLayoutCheck(){android.widget.LinearLayout root=(android.widget.LinearLayout)get("root");ViewGroup nav=(ViewGroup)((ViewGroup)root.getChildAt(root.getChildCount()-1)).getChildAt(1);check("总览".contentEquals(nav.getChildAt(0).getContentDescription()),"real bottom nav reorders");check("日历".contentEquals(nav.getChildAt(1).getContentDescription()),"real second destination");}
     private Object invokeResult(String name){try{Method method=MainActivity.class.getDeclaredMethod(name);method.setAccessible(true);return method.invoke(activity);}catch(Exception e){throw new RuntimeException(e);}}
     private boolean scroll(android.view.accessibility.AccessibilityNodeInfo node){
         if(node==null)return false;
