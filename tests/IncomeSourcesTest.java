@@ -27,6 +27,8 @@ public final class IncomeSourcesTest {
             retainedSources(work.resolve("retention"));
             largeCumulativeSources(work.resolve("large"));
             legacyQuoteAttribution(work.resolve("legacy-quotes"));
+            delayedClose(work.resolve("delayed-close"));
+            delayedCloseBoundaries(work.resolve("delayed-boundaries"));
             displayText();
             System.out.println("PASS " + checks + " income/source assertions (JVM filesystem doubles)");
         } finally {
@@ -298,6 +300,141 @@ public final class IncomeSourcesTest {
         eq("9,223,372,036,854,775,807.00", tinyRate.amount(Long.MAX_VALUE), "large source conversion does not overflow intermediate fen");
         current.incomeFen = Long.MAX_VALUE;
         eq("首条记录 · 已记收入 +9,223,372,036,854,775,807.00", DailyChangeText.describe(null, current, tinyRate, false), "large source caption remains displayable");
+    }
+
+    private static void delayedClose(Path folder) throws Exception {
+        Fixture f = new Fixture(folder, "2026-11-12T07:00:00Z");
+        WealthStore.Account broker = f.store.addAccount("证券", "securities", 0);
+        WealthStore.Holding h = f.store.addHolding(broker.id, "510300", "ETF", 1000, 100_000_000);
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 100_000_000, "20261112150000")));
+        f.clock.at("2026-11-13T06:00:00Z");
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_600_000, "20261113140000")));
+        f.store.load();
+        f.clock.at("2026-11-14T04:00:00Z");
+        f.store.recordToday(); // Startup records the cached Friday price before the request returns.
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_000_000, "20261113150000")));
+        AssetCalendar.Month month = AssetCalendar.build(f.store.dailySnapshots, java.time.YearMonth.of(2026, 11));
+        eq(-100_000, month.days.get(12).delta(), "Issue #4: full one-percent fall belongs to Friday");
+        eq(0, month.days.get(13).delta(), "Issue #4: Saturday has no stock movement");
+        eq(-100_000, f.store.dailySnapshots.get(1).observedMarketChangeFen, "Friday quote source corrected");
+        eq(0, f.latest().observedMarketChangeFen, "Saturday quote source not duplicated");
+        truth(f.latest().sourcesKnown, "correction keeps source continuity");
+        eq(Instant.parse("2026-11-13T06:00:00Z").toEpochMilli(), f.store.dailySnapshots.get(1).recordedAt, "original observation time retained");
+        eq(f.clock.millis(), f.store.dailySnapshots.get(1).quoteCorrectedAt, "late correction time is explicit");
+        long total = f.store.totalAssets();
+        String before = state(f.store);
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_000_000, "20261113150000")));
+        eq(before, state(f.store), "repeated refresh is idempotent");
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_600_000, "20261113140000")));
+        eq(before, state(f.store), "older response cannot undo correction");
+        f.store.importJson(f.store.exportJson());
+        f.store.load();
+        eq(before, state(f.store), "corrected history and evidence survive backup and reload");
+        eq(total, f.store.totalAssets(), "attribution does not change final assets");
+        f.store.applyQuotes(Collections.singletonList(quote(h.id, 98_900_000, "20261113150100")));
+        eq(-110_000, f.store.dailySnapshots.get(1).observedMarketChangeFen, "revised late close uses retained evidence");
+        eq(0, f.latest().observedMarketChangeFen, "revised close is not booked twice");
+        for (String key : new String[]{"quoteBasisAt", "quoteCorrectedAt"}) {
+            JSONObject invalid = new JSONObject(f.store.exportJson());
+            JSONObject item = key.equals("quoteBasisAt") ? invalid.getJSONArray("holdings").getJSONObject(0)
+                    : invalid.getJSONArray("dailySnapshots").getJSONObject(1);
+            item.remove(key);
+            rejectsUnchanged(f, () -> f.store.importJson(invalid.toString()), "v6 requires " + key);
+            item.put(key, -1);
+            rejectsUnchanged(f, () -> f.store.importJson(invalid.toString()), "v6 rejects negative " + key);
+        }
+    }
+
+    private static void delayedCloseBoundaries(Path folder) throws Exception {
+        for (String scenario : new String[]{"direct", "income", "quantity", "account-edit", "legacy", "missing",
+                "multi-day", "unknown", "restored-gap", "rollback", "failure", "mixed", "mixed-direct", "upgrade-friday", "sunday", "month-end"}) {
+            boolean monthEnd = scenario.equals("month-end");
+            Fixture f = new Fixture(folder.resolve(scenario), monthEnd ? "2026-10-29T07:00:00Z" : "2026-11-12T07:00:00Z");
+            WealthStore.Account bank = f.store.addAccount("银行", "bank", 0);
+            WealthStore.Account broker = f.store.addAccount("证券", "securities", 0);
+            WealthStore.Holding h = f.store.addHolding(broker.id, "510300", "ETF", 1000, 100_000_000);
+            WealthStore.Holding second = null, coin = null;
+            if (scenario.startsWith("mixed")) {
+                second = f.store.addHolding(broker.id, "510500", "另一 ETF", 1000, 100_000_000);
+                WealthStore.Account wallet = f.store.addAccount("钱包", "crypto", 0);
+                coin = f.store.addCryptoHolding(wallet.id, "BTC", "1", 100_000_000);
+                f.store.applyQuotes(Collections.singletonList(quote(coin.id, 100_000_000, "20261112150000")));
+                f.store.applyQuotes(Collections.singletonList(quote(second.id, 100_000_000, "20261112150000")));
+            }
+            f.store.applyQuotes(Collections.singletonList(quote(h.id, 100_000_000, monthEnd ? "20261029150000" : "20261112150000")));
+            String friday = monthEnd ? "2026-10-30" : "2026-11-13";
+            String afternoon = monthEnd ? "20261030140000" : "20261113140000";
+            String close = monthEnd ? "20261030150000" : "20261113150000";
+            if (!scenario.equals("missing") && !scenario.equals("multi-day")) {
+                f.clock.at(friday + "T06:00:00Z");
+                f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_600_000, afternoon)));
+                if (second != null) f.store.applyQuotes(Collections.singletonList(quote(second.id, 99_600_000, afternoon)));
+            } else if (scenario.equals("multi-day")) {
+                f.clock.at(friday + "T06:00:00Z");
+                f.store.recordToday(); // Thursday's price is still cached; do not invent Friday-only movement.
+            }
+            if (scenario.equals("legacy") || scenario.equals("upgrade-friday") || scenario.equals("unknown") || scenario.equals("restored-gap")) {
+                JSONObject json = new JSONObject(f.store.exportJson());
+                if (scenario.equals("legacy") || scenario.equals("upgrade-friday")) {
+                    json.put("version", 5);
+                    json.getJSONArray("holdings").getJSONObject(0).remove("quoteBasisAt");
+                } else if (scenario.equals("unknown")) json.getJSONArray("dailySnapshots").getJSONObject(1).put("sourcesKnown", false);
+                else json.getJSONArray("holdings").getJSONObject(0).put("lastPriceMicros", 99_500_000);
+                f.store.importJson(json.toString());
+            }
+            if (scenario.equals("upgrade-friday")) {
+                f.clock.at(friday + "T06:30:00Z");
+                f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_600_000, afternoon)));
+                eq(f.clock.millis(), f.latest().recordedAt, "unchanged quote creates fresh upgrade evidence");
+            }
+            f.store.load();
+            long fridayBefore = f.latest().marketFen;
+            f.clock.at(monthEnd ? "2026-11-01T04:00:00Z" : "2026-11-14T04:00:00Z");
+            if (scenario.equals("quantity")) f.store.updateHolding(h.id, 2000, 100_000_000);
+            if (scenario.equals("account-edit")) f.store.updateAccount(broker.id, "证券", 100);
+            if (scenario.equals("income")) f.store.recordIncome(bank.id, 12_345, "工资", "");
+            if (!scenario.equals("direct") && !scenario.equals("mixed-direct") && !scenario.equals("restored-gap")) f.store.recordToday();
+            if (scenario.equals("sunday")) f.clock.at("2026-11-15T04:00:00Z");
+            if (scenario.equals("rollback")) f.clock.at("2026-11-13T16:00:00Z"); // Same day, before its existing observation.
+            if (scenario.equals("failure")) {
+                String before = state(f.store);
+                byte[] bytes = Files.readAllBytes(f.ledger());
+                Path blocked = f.folder.resolve("wealth-v1.json.new"); Files.createDirectory(blocked);
+                try {
+                    rejectsState(() -> f.store.applyQuotes(Collections.singletonList(quote(h.id, 99_000_000, close))), "late close write failure surfaces");
+                    eq(before, state(f.store), "failed correction rolls back every affected day and quote");
+                    truth(Arrays.equals(bytes, Files.readAllBytes(f.ledger())), "failed correction preserves disk bytes");
+                } finally { Files.delete(blocked); }
+            }
+            java.util.List<WealthStore.Holding> updates = new java.util.ArrayList<>();
+            updates.add(quote(h.id, 99_000_000, close));
+            if (second != null) {
+                updates.add(quote(second.id, 99_000_000, close));
+                updates.add(quote(coin.id, 101_000_000, "20261114120000"));
+            }
+            f.store.applyQuotes(updates);
+            boolean safe = Arrays.asList("direct", "income", "failure", "mixed", "mixed-direct", "upgrade-friday", "sunday", "month-end").contains(scenario);
+            if (safe) {
+                long correction = second == null ? -60_000 : -120_000;
+                eq(fridayBefore + correction, f.store.dailySnapshots.get(1).marketFen, scenario + " completes Friday");
+                long dayChange = second == null ? 0 : 100;
+                eq(dayChange, f.latest().observedMarketChangeFen, scenario + " retains only current-day quote source");
+                truth(f.latest().sourcesKnown, scenario + " preserves source continuity");
+                eq(scenario.equals("income") ? 12_345 : 0, f.latest().incomeFen, scenario + " preserves today's income");
+                eq(0, WealthStore.unclassifiedChangeFen(f.store.dailySnapshots.get(f.store.dailySnapshots.size()-2), f.latest()), scenario + " reconciles all sources");
+                if (scenario.equals("sunday")) eq(0, f.store.dailySnapshots.get(2).totalFen() - f.store.dailySnapshots.get(1).totalFen(), "cached Saturday also corrected");
+                if (monthEnd) {
+                    AssetCalendar.Month month = AssetCalendar.build(f.store.dailySnapshots, java.time.YearMonth.of(2026, 11));
+                    truth(month.days.get(0).gap(), "missing October 31 is still a gap");
+                    truth(!month.startsAtBoundary(), "missing month boundary is not fabricated");
+                }
+            } else {
+                eq(fridayBefore, f.store.dailySnapshots.get(scenario.equals("missing") ? 0 : 1).marketFen, scenario + " does not guess historic quantities/prices");
+            }
+            int expectedDays = scenario.equals("missing") ? 2 : scenario.equals("sunday") ? 4 : 3;
+            eq(expectedDays, f.store.dailySnapshots.size(), scenario + " never creates unobserved dates");
+            String saved = state(f.store); f.store.load(); eq(saved, state(f.store), scenario + " persists atomically");
+        }
     }
 
     private static final class Fixture {

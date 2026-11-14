@@ -29,7 +29,7 @@ import java.util.UUID;
 
 /** Local, single-currency wealth ledger. Cash is fen; per-share prices are millionths of yuan. */
 public final class WealthStore {
-    public static final int SCHEMA_VERSION = 5;
+    public static final int SCHEMA_VERSION = 6;
     public static final long MAX_MONEY_FEN = 9_000_000_000_000_000L;
     public static final long MAX_PRICE_MICROS = 1_000_000_000_000_000L;
     public static final long MAX_QUANTITY = 1_000_000_000_000L;
@@ -72,6 +72,8 @@ public final class WealthStore {
         public long lastPriceMicros;
         public long previousCloseMicros;
         public String quoteTime = "";
+        /** Earliest proven snapshot basis for the cached quote; zero means legacy evidence is unavailable. */
+        public long quoteBasisAt;
         public Holding() {}
     }
 
@@ -88,6 +90,8 @@ public final class WealthStore {
     public static final class DailySnapshot {
         public String day = "";
         public long recordedAt;
+        /** Actual receipt time of a proven late stock quote; does not replace the original observation date. */
+        public long quoteCorrectedAt;
         public long cashFen;
         public long marketFen;
         public long costFen;
@@ -108,6 +112,7 @@ public final class WealthStore {
     private static final class State {
         long mutationTime;
         long quoteChangeFen; // Transaction-local; never copied from a previous snapshot.
+        long priorQuoteCorrectionFen;
         final List<Account> accounts = new ArrayList<>();
         final List<Holding> holdings = new ArrayList<>();
         final List<Entry> entries = new ArrayList<>();
@@ -296,6 +301,9 @@ public final class WealthStore {
             if (target == null) continue; // The position may have been deleted while the request was in flight.
             if (!isValidQuoteTime(quote.quoteTime) || quote.lastPriceMicros <= 0) throw invalid("行情数据无效");
             if (!target.quoteTime.isEmpty() && quote.quoteTime.compareTo(target.quoteTime) < 0) continue;
+            boolean corrected = correctDelayedStockQuote(next, target, quote);
+            if (!corrected && (target.quoteBasisAt == 0 || target.lastPriceMicros != quote.lastPriceMicros
+                    || !target.quoteTime.equals(quote.quoteTime))) target.quoteBasisAt = next.mutationTime;
             target.name = clean(quote.name, 80, "证券名称");
             target.lastPriceMicros = quote.lastPriceMicros;
             target.previousCloseMicros = quote.previousCloseMicros;
@@ -305,10 +313,52 @@ public final class WealthStore {
         if (updated > 0) {
             long marketAfter = 0;
             for (Holding holding : next.holdings) marketAfter = add(marketAfter, holdingValue(holding));
-            next.quoteChangeFen = marketAfter - totalMarketValue();
+            next.quoteChangeFen = sourceAdd(marketAfter - totalMarketValue(), -next.priorQuoteCorrectionFen);
             commit(next);
         }
         return updated;
+    }
+
+    /**
+     * A later quote for the same past trading day can complete that day's observed valuation.
+     * We need proof that the cached price and unchanged position were already present in every
+     * affected snapshot. Account mutations deliberately disable this conservative correction.
+     * Missing days, legacy evidence, crypto and multi-trading-day moves are never reconstructed.
+     */
+    private boolean correctDelayedStockQuote(State state, Holding old, Holding quote) {
+        if (isCrypto(old) || !isQuoted(old) || old.quoteBasisAt <= 0
+                || old.lastPriceMicros == quote.lastPriceMicros) return false;
+        String today = dayAt(state.mutationTime);
+        String quoteDay = LocalDateTime.parse(quote.quoteTime, QUOTE_TIME_FORMAT).toLocalDate().toString();
+        if (quoteDay.compareTo(today) >= 0 || !old.quoteTime.substring(0, 8).equals(quote.quoteTime.substring(0, 8))) return false;
+        Account account = findAccount(state.accounts, old.accountId);
+        int first = -1;
+        for (int i = 0; i < state.dailySnapshots.size(); i++) {
+            DailySnapshot day = state.dailySnapshots.get(i);
+            if (day.day.compareTo(today) > 0 || day.recordedAt > state.mutationTime || day.quoteCorrectedAt > state.mutationTime) return false; // Clock rollback.
+            if (day.day.equals(quoteDay)) first = i;
+        }
+        if (first < 0) return false;
+        for (int i = first; i < state.dailySnapshots.size(); i++) {
+            DailySnapshot day = state.dailySnapshots.get(i);
+            if (!day.sourcesKnown || day.recordedAt < old.quoteBasisAt || day.recordedAt < account.updatedAt) return false;
+        }
+        // A restored or externally edited current ledger must agree with its last observation.
+        DailySnapshot last = state.dailySnapshots.get(state.dailySnapshots.size() - 1);
+        long expectedMarket = sourceAdd(totalMarketValue(), last.day.equals(today) ? 0 : state.priorQuoteCorrectionFen);
+        if (last.cashFen != totalCash() || last.marketFen != expectedMarket) return false;
+        long delta = holdingPositionValue(quote.lastPriceMicros, old) - holdingValue(old);
+        for (int i = first; i < state.dailySnapshots.size(); i++) {
+            DailySnapshot day = state.dailySnapshots.get(i);
+            if (day.day.equals(today)) break; // Today's normal commit uses the newly valued holdings.
+            day.marketFen = sourceAdd(day.marketFen, delta);
+            day.quoteCorrectedAt = state.mutationTime;
+            // Preserve the original observation time and conservative quote-age metadata.
+        }
+        DailySnapshot tradingDay = state.dailySnapshots.get(first);
+        tradingDay.observedMarketChangeFen = sourceAdd(tradingDay.observedMarketChangeFen, delta);
+        state.priorQuoteCorrectionFen = sourceAdd(state.priorQuoteCorrectionFen, delta);
+        return true;
     }
 
     public synchronized void deleteHolding(String holdingId) {
@@ -478,7 +528,8 @@ public final class WealthStore {
         DailySnapshot previous = sameDay ? state.dailySnapshots.get(index) : null;
         DailySnapshot baseline = sameDay ? previous : index > 0 ? state.dailySnapshots.get(index - 1) : null;
         // A restored ledger may not match its last observation. Never silently call that gap a quote gain.
-        boolean continuous = baseline == null || (baseline.cashFen == totalCash() && baseline.marketFen == totalMarketValue());
+        boolean continuous = baseline == null || (baseline.cashFen == totalCash()
+                && baseline.marketFen == sourceAdd(totalMarketValue(), sameDay ? 0 : state.priorQuoteCorrectionFen));
         value.sourcesKnown = continuous && (!sameDay || previous.sourcesKnown);
         value.observedMarketChangeFen = sourceAdd(sameDay ? previous.observedMarketChangeFen : 0, state.quoteChangeFen);
         value.incomeFen = sourceAdd(sameDay ? previous.incomeFen : 0, incomeFen);
@@ -492,11 +543,13 @@ public final class WealthStore {
             state.dailySnapshots.get(following).sourcesKnown = false;
         }
         if (sameDay) {
+            boolean newQuoteEvidence = false;
+            for (Holding holding : state.holdings) if (holding.quoteBasisAt > previous.recordedAt) newQuoteEvidence = true;
             if (previous.cashFen == value.cashFen && previous.marketFen == value.marketFen && previous.costFen == value.costFen
                     && previous.unquotedCount == value.unquotedCount && previous.oldestQuoteTime.equals(value.oldestQuoteTime)
                     && previous.incomeFen == value.incomeFen && previous.cashAdjustmentFen == value.cashAdjustmentFen
                     && previous.holdingAdjustmentFen == value.holdingAdjustmentFen && previous.sourcesKnown == value.sourcesKnown
-                    && previous.observedMarketChangeFen == value.observedMarketChangeFen && !followingChanged) return false;
+                    && previous.observedMarketChangeFen == value.observedMarketChangeFen && !followingChanged && !newQuoteEvidence) return false;
             state.dailySnapshots.set(index, value);
         } else {
             if (state.dailySnapshots.size() >= MAX_DAILY_SNAPSHOTS) throw invalid("每日资产记录已达上限，请先导出备份");
@@ -551,6 +604,7 @@ public final class WealthStore {
         for (Holding old : holdings) {
             Holding copy = new Holding(); copy.id = old.id; copy.accountId = old.accountId; copy.code = old.code; copy.name = old.name; copy.quantity = old.quantity; copy.assetType=old.assetType;copy.quantityDecimal=old.quantityDecimal;
             copy.costPriceMicros = old.costPriceMicros; copy.lastPriceMicros = old.lastPriceMicros; copy.previousCloseMicros = old.previousCloseMicros; copy.quoteTime = old.quoteTime;
+            copy.quoteBasisAt = old.quoteBasisAt;
             state.holdings.add(copy);
         }
         for (Entry old : entries) {
@@ -559,6 +613,7 @@ public final class WealthStore {
         }
         for (DailySnapshot old : dailySnapshots) {
             DailySnapshot copy = new DailySnapshot(); copy.day = old.day; copy.recordedAt = old.recordedAt;
+            copy.quoteCorrectedAt = old.quoteCorrectedAt;
             copy.cashFen = old.cashFen; copy.marketFen = old.marketFen; copy.costFen = old.costFen;
             copy.unquotedCount = old.unquotedCount; copy.oldestQuoteTime = old.oldestQuoteTime;
             copy.incomeFen = old.incomeFen; copy.cashAdjustmentFen = old.cashAdjustmentFen;
@@ -589,7 +644,8 @@ public final class WealthStore {
             for (Holding holding : state.holdings) {
                 JSONObject item = new JSONObject(); item.put("id", holding.id); item.put("accountId", holding.accountId); item.put("code", holding.code); item.put("name", holding.name);
                 item.put("quantity", holding.quantity);item.put("assetType",holding.assetType);item.put("quantityDecimal",holding.quantityDecimal); item.put("costPriceMicros", holding.costPriceMicros); item.put("lastPriceMicros", holding.lastPriceMicros);
-                item.put("previousCloseMicros", holding.previousCloseMicros); item.put("quoteTime", holding.quoteTime); holdingArray.put(item);
+                item.put("previousCloseMicros", holding.previousCloseMicros); item.put("quoteTime", holding.quoteTime);
+                item.put("quoteBasisAt", holding.quoteBasisAt); holdingArray.put(item);
             }
             JSONArray entryArray = new JSONArray();
             for (Entry entry : state.entries) {
@@ -599,6 +655,7 @@ public final class WealthStore {
             JSONArray dailyArray = new JSONArray();
             for (DailySnapshot daily : state.dailySnapshots) {
                 JSONObject item = new JSONObject(); item.put("day", daily.day); item.put("recordedAt", daily.recordedAt);
+                item.put("quoteCorrectedAt", daily.quoteCorrectedAt);
                 item.put("cashFen", daily.cashFen); item.put("marketFen", daily.marketFen); item.put("costFen", daily.costFen);
                 item.put("incomeFen", daily.incomeFen); item.put("cashAdjustmentFen", daily.cashAdjustmentFen);
                 item.put("observedMarketChangeFen", daily.observedMarketChangeFen);
@@ -631,6 +688,7 @@ public final class WealthStore {
                 holding.id = string(item, "id"); holding.accountId = string(item, "accountId"); holding.assetType=version>=3?string(item,"assetType"):"stock";holding.quantityDecimal=version>=3?string(item,"quantityDecimal"):"";holding.code = isCrypto(holding)?normalizeCryptoCode(string(item,"code")):normalizeSecurityCode(string(item, "code")); holding.name = string(item, "name");
                 holding.quantity = integer(item, "quantity"); holding.costPriceMicros = integer(item, "costPriceMicros"); holding.lastPriceMicros = integer(item, "lastPriceMicros");
                 holding.previousCloseMicros = integer(item, "previousCloseMicros"); holding.quoteTime = string(item, "quoteTime"); state.holdings.add(holding);
+                holding.quoteBasisAt = version >= 6 ? integer(item, "quoteBasisAt") : 0;
             }
             for (int i = 0; i < entryArray.length(); i++) {
                 JSONObject item = entryArray.getJSONObject(i); Entry entry = new Entry();
@@ -643,6 +701,7 @@ public final class WealthStore {
                 for (int i = 0; i < dailyArray.length(); i++) {
                     JSONObject item = dailyArray.getJSONObject(i); DailySnapshot daily = new DailySnapshot();
                     daily.day = string(item, "day"); daily.recordedAt = integer(item, "recordedAt");
+                    daily.quoteCorrectedAt = version >= 6 ? integer(item, "quoteCorrectedAt") : 0;
                     daily.cashFen = integer(item, "cashFen"); daily.marketFen = integer(item, "marketFen"); daily.costFen = integer(item, "costFen");
                     if (version >= 4) {
                         daily.incomeFen = integer(item, "incomeFen"); daily.cashAdjustmentFen = integer(item, "cashAdjustmentFen");
@@ -678,6 +737,8 @@ public final class WealthStore {
             bounded(holding.costPriceMicros, MAX_PRICE_MICROS, "成本单价"); bounded(holding.lastPriceMicros, MAX_PRICE_MICROS, "行情单价"); bounded(holding.previousCloseMicros, MAX_PRICE_MICROS, "昨收单价");
             if (holding.quoteTime == null || (!holding.quoteTime.isEmpty() && !isValidQuoteTime(holding.quoteTime))) throw invalid("行情时间格式无效");
             if (!holding.quoteTime.isEmpty() && holding.lastPriceMicros <= 0) throw invalid("有行情时间的证券须包含有效价格");
+            timestamp(holding.quoteBasisAt);
+            if (holding.quoteBasisAt > 0 && !isQuoted(holding)) throw invalid("行情记录时间须对应有效报价");
             marketTotal = add(marketTotal, holdingValue(holding)); costTotal = add(costTotal, holdingCost(holding));
             previousTotal = add(previousTotal, holdingPositionValue(holding.previousCloseMicros, holding));
         }
@@ -697,6 +758,8 @@ public final class WealthStore {
             catch (DateTimeParseException error) { throw invalid("每日资产日期无效"); }
             if (daily.day.compareTo(previousDay) <= 0) throw invalid("每日资产记录须按日期递增且不可重复");
             timestamp(daily.recordedAt);
+            timestamp(daily.quoteCorrectedAt);
+            if (daily.quoteCorrectedAt > 0 && daily.quoteCorrectedAt < daily.recordedAt) throw invalid("行情回补时间早于原记录");
             if (!dayAt(daily.recordedAt).equals(daily.day)) throw invalid("每日资产日期与记录时间不一致");
             bounded(daily.cashFen, MAX_MONEY_FEN, "历史可用余额"); bounded(daily.marketFen, MAX_MONEY_FEN, "历史持仓市值");
             bounded(daily.costFen, MAX_MONEY_FEN, "历史持仓成本"); daily.totalFen();
